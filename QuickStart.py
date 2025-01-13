@@ -6,9 +6,10 @@ import ctypes
 
 # 第三方库导入
 from win32com.client import Dispatch
+from win32com.shell import shell, shellcon
 import win32gui
 from PyQt5.QtCore import QFileInfo, Qt
-from PyQt5.QtGui import QIcon, QPixmap, QFont
+from PyQt5.QtGui import QIcon, QPixmap, QFont, QKeyEvent
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QListWidget, QVBoxLayout, QPushButton, QHBoxLayout,
     QWidget, QListWidgetItem, QAbstractItemView, QMenu, QMessageBox, QInputDialog,
@@ -165,6 +166,14 @@ class QuickLaunchApp(QMainWindow):
         self.save_config()
         self.update_file_list()
 
+    def keyPressEvent(self, event: QKeyEvent):
+        """捕获键盘事件"""
+        if event.key() == Qt.Key_Delete:
+            # 获取选中的文件项
+            selected_items = self.file_list_widget.selectedItems()
+            if selected_items:
+                self.delete_files(selected_items)
+
     def dragEnterEvent(self, event):
         """处理拖拽进入事件"""
         if event.mimeData().hasUrls():
@@ -231,37 +240,66 @@ class QuickLaunchApp(QMainWindow):
             except Exception as e:
                 print(f"添加文件时出错: {e}")
 
-        # 保存配置并更新界面
+        # 保存配置
         self.save_config()
+
+        # 刷新界面
+        self.update_file_list()
 
     def get_icon(self, file_path):
         """根据文件类型获取图标"""
-        if file_path.endswith(".url"):
-            try:
-                # 解析 .url 文件内容
-                icon_file = None
-                icon_index = 0
-                with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-                    for line in f:
-                        if line.startswith("IconFile="):
-                            icon_file = line.split("=", 1)[1].strip()
-                        elif line.startswith("IconIndex="):
-                            icon_index = int(line.split("=", 1)[1].strip())
+        try:
+            # 处理 .url 文件（Internet 快捷方式）
+            if file_path.endswith(".url"):
+                try:
+                    # 解析 .url 文件内容
+                    icon_file = None
+                    icon_index = 0
+                    with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                        for line in f:
+                            if line.startswith("IconFile="):
+                                icon_file = line.split("=", 1)[1].strip()
+                            elif line.startswith("IconIndex="):
+                                icon_index = int(line.split("=", 1)[1].strip())
 
-                # 如果有有效的 IconFile 路径，尝试加载图标
-                if icon_file and os.path.exists(icon_file):
-                    if icon_file.endswith(".ico"):
-                        return QIcon(icon_file)  # 如果是 .ico 文件，直接使用 QIcon
+                    # 如果有有效的 IconFile 路径，尝试加载图标
+                    if icon_file and os.path.exists(icon_file):
+                        if icon_file.endswith(".ico"):
+                            return QIcon(icon_file)  # 如果是 .ico 文件，直接使用 QIcon
+                        else:
+                            # 提取其他类型文件的图标
+                            hicon, _ = self.extract_icon_from_file(icon_file, icon_index)
+                            if hicon:
+                                pixmap = self.hicon_to_pixmap(hicon)
+                                if pixmap:
+                                    return QIcon(pixmap)
+                    print(f"无效的 IconFile 路径: {icon_file}")
+                except Exception as e:
+                    print(f"解析 .url 文件失败: {e}")
+
+            # 处理 .lnk 文件（Windows 快捷方式）
+            elif file_path.endswith(".lnk") and self.config.get("remove_arrow", False):
+                try:
+                    # 使用 win32com.client 提取 .lnk 文件的目标路径
+                    shell = Dispatch("WScript.Shell")
+                    shortcut = shell.CreateShortcut(file_path)
+                    target_path = shortcut.TargetPath
+
+                    # 如果目标路径存在，从目标文件提取图标
+                    if os.path.exists(target_path):
+                        return self.icon_provider.icon(QFileInfo(target_path))  # 返回目标文件的图标
                     else:
-                        # 提取其他类型文件的图标
-                        hicon, _ = self.extract_icon_from_file(icon_file, icon_index)
-                        if hicon:
-                            pixmap = self.hicon_to_pixmap(hicon)
-                            if pixmap:
-                                return QIcon(pixmap)
-                print(f"无效的 IconFile 路径: {icon_file}")
-            except Exception as e:
-                print(f"解析 .url 文件失败: {e}")
+                        print(f"快捷方式的目标路径无效: {target_path}")
+                except Exception as e:
+                    print(f"解析 .lnk 文件失败: {e}")
+
+            # 默认情况：使用 QFileIconProvider 获取文件的图标
+            return self.icon_provider.icon(QFileInfo(file_path))
+
+        except Exception as e:
+            print(f"获取图标失败：{file_path}, 错误：{e}")
+            # 返回一个空图标以防止程序崩溃
+            return QIcon()
 
         # 如果解析失败或文件不是 .url，返回默认图标
         return self.icon_provider.icon(QFileInfo(file_path))
@@ -283,13 +321,23 @@ class QuickLaunchApp(QMainWindow):
             print(f"保存配置文件时出错: {e}")
 
     def load_config(self):
-        """从 config.json 加载配置"""
+        """加载配置从 config.json"""
         if os.path.exists("config.json"):
             try:
                 with open("config.json", "r", encoding="utf-8") as f:
                     self.config = json.load(f)
             except Exception as e:
-                print(f"加载配置文件时出错: {e}")
+                QMessageBox.warning(self, self.tr("error"), str(e))
+
+        # 检查配置完整性
+        valid_files = []
+        for file_info in self.config.get("files", []):
+            if "path" in file_info and os.path.exists(file_info["path"]):
+                valid_files.append(file_info)
+            else:
+                print(f"无效的文件配置或路径：{file_info}")
+        self.config["files"] = valid_files
+
         self.update_file_list()
 
     def update_file_list(self):
@@ -343,44 +391,52 @@ class QuickLaunchApp(QMainWindow):
 
     def show_context_menu(self, pos):
         """右键菜单"""
-        selected_items = self.file_list_widget.selectedItems()
-        if not selected_items:
-            return
+        try:
+            # 获取选中的文件项
+            selected_items = self.file_list_widget.selectedItems()
+            if not selected_items:
+                return
 
-        menu = QMenu(self)
-        remark_action = menu.addAction(self.tr("remark"))
-        delete_action = menu.addAction(self.tr("delete"))
-        open_action = menu.addAction(self.tr("open_as_admin"))
-        location_action = menu.addAction(self.tr("open_location"))
-        params_action = menu.addAction(self.tr("add_params"))  # 添加启动参数选项
+            # 创建右键菜单
+            menu = QMenu(self)
 
-        action = menu.exec_(self.file_list_widget.mapToGlobal(pos))
+            # 添加右键菜单项
+            remark_action = menu.addAction(self.tr("remark"))  # 备注
+            delete_action = menu.addAction(self.tr("delete"))  # 删除
 
-        if action == remark_action:
-            self.add_remark(selected_items)
-        elif action == delete_action:
-            self.delete_files(selected_items)
-        elif action == open_action:
-            self.toggle_admin(selected_items)  # 切换管理员权限
-        elif action == location_action:
-            self.open_file_location(selected_items[0])
-        elif action == params_action:
-            self.add_params(selected_items)  # 添加启动参数
+            # 动态显示管理员权限菜单项
+            first_file = self.config["files"][self.file_list_widget.row(selected_items[0])]
+            if first_file.get("admin", False):
+                toggle_admin_action = menu.addAction(self.tr("取消管理员权限"))
+            else:
+                toggle_admin_action = menu.addAction(self.tr("设置管理员权限"))
 
-        if action == remark_action:
-            self.add_remark(selected_items)
-        elif action == delete_action:
-            self.delete_files(selected_items)
-        elif action == open_action:
-            self.open_selected_files(admin=True)
-        elif action == location_action:
-            self.open_file_location(selected_items[0])
+            location_action = menu.addAction(self.tr("open_location"))  # 打开文件所在位置
+            params_action = menu.addAction(self.tr("add_params"))  # 添加启动参数
+
+            # 显示菜单并获取用户选择的动作
+            action = menu.exec_(self.file_list_widget.mapToGlobal(pos))
+
+            # 根据用户选择执行对应的操作
+            if action == remark_action:
+                self.add_remark(selected_items)
+            elif action == delete_action:
+                self.delete_files(selected_items)
+            elif action == toggle_admin_action:
+                self.toggle_admin(selected_items)  # 切换管理员权限
+            elif action == location_action:
+                self.open_file_location(selected_items[0])
+            elif action == params_action:
+                self.add_params(selected_items)
+
+        except Exception as e:
+            print(f"右键菜单出错：{e}")
 
     def handle_double_click(self, item):
         """处理双击打开事件"""
         row = self.file_list_widget.row(item)
         file_info = self.config["files"][row]
-        self.open_file(file_info, admin=False)
+        self.open_file(file_info)  # 根据配置决定是否以管理员权限打开
 
     def open_selected_files(self, admin=False):
         """打开选中文件"""
@@ -393,10 +449,14 @@ class QuickLaunchApp(QMainWindow):
             file_info = self.config["files"][row]
             self.open_file(file_info, admin=admin)
 
-    def open_file(self, file_info, admin):
+    def open_file(self, file_info, admin=None):
         """打开单个文件"""
         file_path = file_info["path"]
         params = file_info.get("params", "")
+
+        # 如果 admin 参数未指定，则根据文件配置决定是否以管理员权限运行
+        if admin is None:
+            admin = file_info.get("admin", False)
 
         if not os.path.exists(file_path):
             QMessageBox.warning(self, self.tr("error"), self.tr("file_not_found") + f": {file_path}")
@@ -404,11 +464,19 @@ class QuickLaunchApp(QMainWindow):
 
         try:
             if admin:
-                ctypes.windll.shell32.ShellExecuteW(None, "runas", file_path, params, None, 1)
+                # 以管理员权限运行
+                shell.ShellExecuteEx(
+                    fMask=shellcon.SEE_MASK_NOCLOSEPROCESS,
+                    lpVerb="runas",
+                    lpFile=file_path,
+                    lpParameters=params,
+                    nShow=1
+                )
             else:
+                # 普通方式运行
                 os.startfile(file_path)
         except Exception as e:
-            QMessageBox.critical(self, self.tr("error"), str(e))
+            QMessageBox.critical(self, self.tr("error"), f"无法打开文件：{e}")
 
     def toggle_admin(self, items):
         """切换管理员权限"""
@@ -418,20 +486,54 @@ class QuickLaunchApp(QMainWindow):
             is_admin = file_info.get("admin", False)
             file_info["admin"] = not is_admin  # 切换管理员权限状态
 
+            # 更新显示名称（添加或移除 [管理员] 标记）
+            self.update_list_item(item, file_info)
+
+        # 保存配置到文件
         self.save_config()
-        self.update_file_list()
 
     def add_remark(self, items):
         """添加备注"""
         for item in items:
-            row = self.file_list_widget.row(item)
-            file_info = self.config["files"][row]
-            current_name = file_info["remark"] or os.path.basename(file_info["path"])
-            text, ok = QInputDialog.getText(self, self.tr("remark"), self.tr("input_remark"), text=current_name)
-            if ok:
-                file_info["remark"] = text
+            try:
+                row = self.file_list_widget.row(item)
+                file_info = self.config["files"][row]
+
+                # 当前的备注或默认名称
+                current_name = file_info["remark"] or os.path.basename(file_info["path"])
+
+                # 弹出对话框让用户输入备注
+                text, ok = QInputDialog.getText(self, self.tr("remark"), self.tr("input_remark"), text=current_name)
+                if ok:
+                    file_info["remark"] = text  # 保存备注
+                    # 直接更新当前项的显示内容，无需重载整个列表
+                    self.update_list_item(item, file_info)
+            except Exception as e:
+                print(f"添加备注时出错：{e}")
+
         self.save_config()
-        self.update_file_list()
+
+    def update_list_item(self, item, file_info):
+        """更新单个列表项显示"""
+        try:
+            # 构造新的显示名称
+            show_extensions = self.config.get("show_extensions", True)
+            file_path = file_info["path"]
+            file_name = os.path.basename(file_path) if show_extensions else \
+            os.path.splitext(os.path.basename(file_path))[0]
+            remark = file_info.get("remark", "")
+            display_name = f"{remark} ({file_name})" if remark else file_name
+
+            # 更新列表项文本
+            admin_text = "[管理员]" if file_info.get("admin", False) else ""
+            params = file_info.get("params", "")
+            params_text = f"[启动参数: {params}]" if params else ""
+
+            # 格式化显示
+            formatted_text = f"{display_name:<50} {admin_text} {params_text}"
+            item.setText(formatted_text.strip())
+        except Exception as e:
+            print(f"更新列表项时出错：{e}")
 
     def delete_files(self, items):
         """删除选中的文件"""
@@ -546,6 +648,13 @@ class QuickLaunchApp(QMainWindow):
         show_extensions_checkbox.setChecked(self.config.get("show_extensions", True))
         show_extensions_checkbox.stateChanged.connect(lambda state: self.toggle_extensions(state))
 
+        # 去除快捷方式箭头选项
+        remove_arrow_checkbox = QCheckBox(self.tr("快捷图标箭头"), dialog)
+        remove_arrow_checkbox.setChecked(self.config.get("remove_arrow", False))  # 从配置中读取
+        remove_arrow_checkbox.stateChanged.connect(
+            lambda state: self.toggle_remove_arrow(state == Qt.Checked)
+        )
+
         # 语言选择部分
         language_layout = QHBoxLayout()
         language_label = QLabel(self.tr("language"), dialog)
@@ -569,6 +678,7 @@ class QuickLaunchApp(QMainWindow):
 
         # 添加到设置窗口的主布局
         layout.addWidget(show_extensions_checkbox)
+        layout.addWidget(remove_arrow_checkbox)
         layout.addLayout(language_layout)
 
         # 添加弹性空间，让链接放置到最底部
@@ -588,6 +698,12 @@ class QuickLaunchApp(QMainWindow):
         self.config["show_extensions"] = state == Qt.Checked
         self.save_config()
         self.update_file_list()
+
+    def toggle_remove_arrow(self, enable):
+        """切换是否去掉快捷方式箭头"""
+        self.config["remove_arrow"] = enable
+        self.save_config()  # 保存配置
+        self.update_file_list()  # 重新加载列表，更新图标
 
     def change_language(self, language):
         """切换语言"""
