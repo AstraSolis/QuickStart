@@ -5,12 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="15a7cc59-78e5-4ca0-9672-c9bdc1b03113" name="更改" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/QuickStart.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/QuickStart.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/QuickStart.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/QuickStart.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -20,6 +16,18 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;AstraSolis&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/AstraSolis/QuickStart.git&quot;,
+    &quot;accountId&quot;: &quot;234e61b2-8407-4ce9-829f-2fc075b702ce&quot;
+  }
+}</component>
   <component name="ProblemsViewState">
     <option name="selectedTabId" value="CurrentFile" />
   </component>
@@ -43,7 +51,7 @@
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;master&quot;,
     &quot;run.code.analysis.last.selected.profile&quot;: &quot;aDefault&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;vcs.Git&quot;
+    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;
   }
 }</component>
   <component name="PyConsoleOptionsProvider">
@@ -53,18 +61,6 @@
         <option name="myModuleName" value="QuickStart" />
       </console-settings>
     </option>
-  </component>
-  <component name="QodanaHighlightedReportService">
-    <option name="localRunNotPublishedPersistedInfo">
-      <LocalReportPersistedInfo>
-        <option name="path" value="C:\Users\qingfeng\AppData\Local\Temp\qodana_output\qodana.sarif.json" />
-        <option name="reportGuid" value="acefac16-9482-4d38-90a3-85ea0745cb37" />
-        <option name="reportName" value="QuickStart/qodana/2025-01-12" />
-      </LocalReportPersistedInfo>
-    </option>
-  </component>
-  <component name="QodanaIsSelectedPersistenceService">
-    <option name="selectedOrLoading" value="true" />
   </component>
   <component name="QodanaReportsService">
     <option name="descriptions">
@@ -107,17 +103,17 @@
       <command value="lrelease translations/zh.ts -qm translations/zh.qm lrelease translations/en.ts -qm translations/en.qm " />
       <command value="git --version" />
       <command value="git config -l " />
-      <command value="pip install pywin32" />
-      <command value="pip install pyqt5" />
-      <command value="pip install PyQt5-sip" />
+      <command value="python -m pip show PyQt5 python -m pip show PyQt5-sip " />
       <command value="pip install PyQt5" />
       <command value="pip install PyQt5 " />
-      <command value="python -m pip show PyQt5 python -m pip show PyQt5-sip " />
-      <command value="python -m pip show PyQt5" />
       <command value="python -m pip show PyQt5-sip " />
+      <command value="python -m pip show PyQt5" />
+      <command value="pip install PyQt5-sip" />
+      <command value="pip install pyqt5" />
+      <command value="pip install pywin32" />
     </option>
   </component>
-  <component name="RunManager" selected="Python.python -m pip show PyQt5">
+  <component name="RunManager">
     <configuration name="python -m pip show PyQt5 python -m pip show PyQt5-sip" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="QuickStart" />
       <option name="ENV_FILES" value="" />
@@ -186,8 +182,10 @@
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.python -m pip show PyQt5-sip" />
         <item itemvalue="Python.python -m pip show PyQt5" />
+        <item itemvalue="Python.python -m pip show PyQt5-sip" />
+        <item itemvalue="Python.python -m pip show PyQt5-sip" />
+        <item itemvalue="Python.python -m pip show PyQt5-sip" />
         <item itemvalue="Python.python -m pip show PyQt5 python -m pip show PyQt5-sip" />
       </list>
     </recent_temporary>

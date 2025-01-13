@@ -573,3 +573,5 @@ if __name__ == "__main__":
     window = QuickLaunchApp()
     window.show()
     sys.exit(app.exec_())
+
+# 测试
