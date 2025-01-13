@@ -8,7 +8,7 @@ import ctypes
 from win32com.client import Dispatch
 import win32gui
 from PyQt5.QtCore import QFileInfo, Qt
-from PyQt5.QtGui import QIcon, QPixmap
+from PyQt5.QtGui import QIcon, QPixmap, QFont
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QListWidget, QVBoxLayout, QPushButton, QHBoxLayout,
     QWidget, QListWidgetItem, QAbstractItemView, QMenu, QMessageBox, QInputDialog,
@@ -194,11 +194,11 @@ class QuickLaunchApp(QMainWindow):
 
     def add_files_from_list(self, files):
         """从文件列表添加文件，并更新列表和配置"""
-        existing_files = [item.toolTip() for item in self.get_all_list_items()]  # 获取已存在文件列表
+        existing_paths = {file_info["path"] for file_info in self.config["files"]}  # 使用集合加速查重
 
         for file_path in files:
             # 跳过重复文件
-            if file_path in existing_files:
+            if file_path in existing_paths:
                 print(f"文件已存在: {file_path}")
                 continue
 
@@ -225,11 +225,14 @@ class QuickLaunchApp(QMainWindow):
                     "admin": False,
                     "params": ""
                 })
+
+                # 添加到已存在路径集合
+                existing_paths.add(file_path)
             except Exception as e:
                 print(f"添加文件时出错: {e}")
 
-                # 保存配置并更新界面
-            self.save_config()
+        # 保存配置并更新界面
+        self.save_config()
 
     def get_icon(self, file_path):
         """根据文件类型获取图标"""
@@ -270,6 +273,10 @@ class QuickLaunchApp(QMainWindow):
     def save_config(self):
         """保存配置到 config.json"""
         try:
+            # 去重文件列表
+            unique_files = {file_info["path"]: file_info for file_info in self.config["files"]}
+            self.config["files"] = list(unique_files.values())
+
             with open("config.json", "w", encoding="utf-8") as f:
                 json.dump(self.config, f, indent=4, ensure_ascii=False)
         except Exception as e:
@@ -292,9 +299,15 @@ class QuickLaunchApp(QMainWindow):
 
         for file_info in self.config["files"]:
             try:
+                if not file_info or "path" not in file_info:
+                    continue
+
                 # 获取文件路径和备注
+                file_path = file_info.get("path", "")
+                if not os.path.exists(file_path):
+                    continue
+
                 remark = file_info.get("remark", "")
-                file_path = file_info["path"]
                 file_name = os.path.basename(file_path)
                 if not show_extensions:
                     file_name = os.path.splitext(file_name)[0]
@@ -304,26 +317,29 @@ class QuickLaunchApp(QMainWindow):
                 if remark:
                     display_name = f"{remark} ({display_name})"
 
-                # 添加管理员状态
-                if file_info.get("admin", False):
-                    display_name += " [管理员]"
-
-                # 添加启动参数
+                # 添加管理员状态和启动参数
+                admin_text = "[管理员]" if file_info.get("admin", False) else ""
                 params = file_info.get("params", "")
-                if params:
-                    display_name += f" [启动参数: {params}]"
+                params_text = f"[启动参数: {params}]" if params else ""
 
-                # 获取图标
+                # 获取图标并创建列表项
                 icon = self.get_icon(file_path)
-
-                # 创建列表项
-                item = QListWidgetItem(display_name)
+                item = QListWidgetItem()
                 item.setToolTip(file_path)
                 item.setIcon(icon)
-                self.file_list_widget.addItem(item)
+
+                # 格式化显示文本，控制间距
+                formatted_text = f"{display_name:<50} {admin_text:<10} {params_text}"
+                item.setText(formatted_text.strip())
+
+                # 设置固定宽度字体避免对齐问题
+                font = QFont("Monospace")
+                font.setStyleHint(QFont.Monospace)
+                font.setPointSize(10)
+                item.setFont(font)
 
             except Exception as e:
-                print(f"更新文件列表时出错: {e}")
+                print(f"更新文件列表时出错，文件信息：{file_info}, 错误：{e}")
 
     def show_context_menu(self, pos):
         """右键菜单"""
@@ -454,9 +470,19 @@ class QuickLaunchApp(QMainWindow):
 
         for file_info in self.config["files"]:
             try:
-                # 获取文件路径和备注
+                # 检查 file_info 的完整性
+                if not file_info or "path" not in file_info:
+                    print("跳过无效的文件信息：", file_info)
+                    continue
+
+                # 检查路径是否有效
+                file_path = file_info.get("path", "")
+                if not os.path.exists(file_path):
+                    print(f"文件路径无效，跳过：{file_path}")
+                    continue
+
+                # 提取文件名和备注
                 remark = file_info.get("remark", "")
-                file_path = file_info["path"]
                 file_name = os.path.basename(file_path)
                 if not show_extensions:
                     file_name = os.path.splitext(file_name)[0]
@@ -467,20 +493,34 @@ class QuickLaunchApp(QMainWindow):
                     display_name = f"{remark} ({display_name})"
 
                 # 添加管理员状态和启动参数
-                if file_info.get("admin", False):
-                    display_name += " [管理员]"
+                admin_text = "[管理员]" if file_info.get("admin", False) else ""
                 params = file_info.get("params", "")
-                if params:
-                    display_name += f" [启动参数: {params}]"
+                params_text = f"[启动参数: {params}]" if params else ""
 
                 # 获取图标并创建列表项
-                icon = self.get_icon(file_path)
-                item = QListWidgetItem(display_name)
+                try:
+                    icon = self.get_icon(file_path)
+                except Exception as icon_error:
+                    print(f"图标加载失败：{file_path}, 错误：{icon_error}")
+                    icon = QIcon()  # 使用默认空图标
+
+                item = QListWidgetItem()
                 item.setToolTip(file_path)
                 item.setIcon(icon)
+
+                # 格式化显示文本
+                formatted_text = f"{display_name:<50} {admin_text} {params_text}"
+                item.setText(formatted_text.strip())
+
+                # 设置固定宽度字体避免对齐问题
+                font = QFont("Monospace")
+                font.setStyleHint(QFont.Monospace)
+                font.setPointSize(10)
+                item.setFont(font)
+
                 self.file_list_widget.addItem(item)
             except Exception as e:
-                print(f"更新文件列表时出错: {e}")
+                print(f"更新文件列表时出错，文件信息：{file_info}, 错误：{e}")
 
     def load_config(self):
         """加载配置从 config.json"""
@@ -574,4 +614,4 @@ if __name__ == "__main__":
     window.show()
     sys.exit(app.exec_())
 
-# 测试 11111111
+# 测试
