@@ -3,6 +3,9 @@
     <p>一个基于 PyQt5 的桌面应用程序，用于快速启动文件</p>
 </div>
 
+> 一些不常用的文件或软件，不想每次使用时翻找目录，又希望保持桌面的整洁，可以试试这个软件
+>
+> 
 ---
 
 ## ✨ 功能特色
@@ -19,9 +22,30 @@
 
 <div align="center">
     <h2>📸 使用截图</h2>
- ![image](https://github.com/user-attachments/assets/529e50af-fefc-4f06-bd1c-33559979d1b8)
+ ![主界面](https://github.com/user-attachments/assets/529e50af-fefc-4f06-bd1c-33559979d1b8)
 </div>
 
+---
+## 文件配置
+
+应用的文件信息保存在 `config.json` 文件中，结构如下：
+
+```json
+{
+    "files": [
+        {
+            "name": "example.exe",
+            "path": "C:/path/to/example.exe",
+            "remark": "示例文件",
+            "admin": false,
+            "params": ""
+        }
+    ],
+    "show_extensions": true,
+    "language": "中文",
+    "remove_arrow": false
+}
+```
 ---
 
 ## 💻 安装与运行
@@ -40,3 +64,10 @@
 
 ```bash
 pip install PyQt5 pywin32
+```
+---
+
+<div>
+⭐ 如果你喜欢这个项目，请给它一个 Star！
+</div>
+
