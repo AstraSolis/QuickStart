@@ -1,3 +1,4 @@
+
 # 标准库导入
 import os
 import sys
@@ -36,7 +37,8 @@ class QuickLaunchApp(QMainWindow):
                 "select_files": "选择文件",
                 "error": "错误",
                 "file_not_found": "文件未找到",
-                "open_as_admin": "切换管理员权限",
+                "administrator": "管理员",
+                "cancel_administrator": "取消管理员",
                 "open_location": "打开文件所在位置",
                 "remark": "备注",
                 "delete": "删除",
@@ -46,6 +48,7 @@ class QuickLaunchApp(QMainWindow):
                 "input_params": "请输入启动参数：",
                 "show_extensions": "显示文件后缀名",
                 "language": "语言",
+                "quick_icon_arrow": "快捷图标箭头"
             },
             "English": {
                 "title": "Quick Launch Files",
@@ -54,7 +57,8 @@ class QuickLaunchApp(QMainWindow):
                 "select_files": "Select Files",
                 "error": "Error",
                 "file_not_found": "File not found",
-                "open_as_admin": "Open as Administrator",
+                "administrator": "administrator",
+                "cancel_administrator": "cancel administrator",
                 "open_location": "Open File Location",
                 "remark": "Remark",
                 "delete": "Delete",
@@ -64,11 +68,13 @@ class QuickLaunchApp(QMainWindow):
                 "input_params": "Enter startup parameters:",
                 "show_extensions": "Show File Extensions",
                 "language": "Language",
+                "quick_icon_arrow": "quick icon arrow"
             }
         }
 
         self.init_ui()  # 初始化界面
         self.load_config()  # 加载配置
+        self.retranslate_ui() # 根据加载的语言配置更新界面文本
 
     def tr(self, key):
         """翻译文字"""
@@ -338,56 +344,66 @@ class QuickLaunchApp(QMainWindow):
                 print(f"无效的文件配置或路径：{file_info}")
         self.config["files"] = valid_files
 
+        # 更新文件列表
         self.update_file_list()
 
     def update_file_list(self):
         """更新文件列表显示"""
+        # 清空文件列表显示
         self.file_list_widget.clear()
+
+        # 从配置中获取是否显示文件后缀名的设置
         show_extensions = self.config.get("show_extensions", True)
 
+        # 遍历配置中的文件列表
         for file_info in self.config["files"]:
             try:
+                # 如果文件信息无效或没有路径，跳过该项
                 if not file_info or "path" not in file_info:
                     continue
 
-                # 获取文件路径和备注
+                # 获取文件路径
                 file_path = file_info.get("path", "")
+                # 如果文件路径不存在于本地，跳过该项
                 if not os.path.exists(file_path):
                     continue
 
+                # 获取备注信息
                 remark = file_info.get("remark", "")
-                file_name = os.path.basename(file_path)
-                if not show_extensions:
-                    file_name = os.path.splitext(file_name)[0]
+                # 根据是否显示后缀名来决定文件名的显示格式
+                file_name = os.path.basename(file_path) if show_extensions else \
+                    os.path.splitext(os.path.basename(file_path))[0]
+                # 如果有备注，用括号包裹显示；否则仅显示文件名
+                display_name = f"{remark} ({file_name})" if remark else file_name
 
-                # 构建显示名称
-                display_name = file_name
-                if remark:
-                    display_name = f"{remark} ({display_name})"
-
-                # 添加管理员状态和启动参数
-                admin_text = "[管理员]" if file_info.get("admin", False) else ""
+                # 根据文件配置，生成管理员标记文本
+                admin_text = f"[{self.tr('administrator')}]" if file_info.get("admin", False) else ""
+                # 获取启动参数并生成相应的文本
                 params = file_info.get("params", "")
-                params_text = f"[启动参数: {params}]" if params else ""
+                params_text = f"[{self.tr('add_params')}: {params}]" if params else ""
 
-                # 获取图标并创建列表项
+                # 获取文件对应的图标
                 icon = self.get_icon(file_path)
+                # 创建一个 QListWidgetItem 对象，用于在列表中显示文件信息
                 item = QListWidgetItem()
-                item.setToolTip(file_path)
-                item.setIcon(icon)
+                item.setToolTip(file_path)  # 设置工具提示为文件完整路径
+                item.setIcon(icon)  # 设置文件图标
 
-                # 格式化显示文本，控制间距
+                # 格式化文件显示的完整文本（包括备注、管理员标记和启动参数）
                 formatted_text = f"{display_name:<50} {admin_text:<10} {params_text}"
-                item.setText(formatted_text.strip())
+                item.setText(formatted_text.strip())  # 设置列表项的显示文本
 
-                # 设置固定宽度字体避免对齐问题
+                # 设置文件项的字体为固定宽度字体，以保持对齐
                 font = QFont("Monospace")
                 font.setStyleHint(QFont.Monospace)
                 font.setPointSize(10)
                 item.setFont(font)
 
+                # 将生成的文件项添加到列表中
+                self.file_list_widget.addItem(item)
             except Exception as e:
-                print(f"更新文件列表时出错，文件信息：{file_info}, 错误：{e}")
+                # 如果在更新文件列表时发生异常，打印错误日志
+                print(f"更新文件列表时出错：{e}")
 
     def show_context_menu(self, pos):
         """右键菜单"""
@@ -407,9 +423,9 @@ class QuickLaunchApp(QMainWindow):
             # 动态显示管理员权限菜单项
             first_file = self.config["files"][self.file_list_widget.row(selected_items[0])]
             if first_file.get("admin", False):
-                toggle_admin_action = menu.addAction(self.tr("取消管理员权限"))
+                toggle_admin_action = menu.addAction(self.tr("cancel_administrator"))
             else:
-                toggle_admin_action = menu.addAction(self.tr("设置管理员权限"))
+                toggle_admin_action = menu.addAction(self.tr("administrator"))
 
             location_action = menu.addAction(self.tr("open_location"))  # 打开文件所在位置
             params_action = menu.addAction(self.tr("add_params"))  # 添加启动参数
@@ -525,9 +541,9 @@ class QuickLaunchApp(QMainWindow):
             display_name = f"{remark} ({file_name})" if remark else file_name
 
             # 更新列表项文本
-            admin_text = "[管理员]" if file_info.get("admin", False) else ""
+            admin_text = "[administrator]" if file_info.get("admin", False) else ""
             params = file_info.get("params", "")
-            params_text = f"[启动参数: {params}]" if params else ""
+            params_text = f"[add_params: {params}]" if params else ""
 
             # 格式化显示
             formatted_text = f"{display_name:<50} {admin_text} {params_text}"
@@ -595,9 +611,9 @@ class QuickLaunchApp(QMainWindow):
                     display_name = f"{remark} ({display_name})"
 
                 # 添加管理员状态和启动参数
-                admin_text = "[管理员]" if file_info.get("admin", False) else ""
+                admin_text = f"[{self.tr('administrator')}]" if file_info.get("admin", False) else ""
                 params = file_info.get("params", "")
-                params_text = f"[启动参数: {params}]" if params else ""
+                params_text = f"[{self.tr('add_params')}: {params}]" if params else ""
 
                 # 获取图标并创建列表项
                 try:
@@ -649,7 +665,7 @@ class QuickLaunchApp(QMainWindow):
         show_extensions_checkbox.stateChanged.connect(lambda state: self.toggle_extensions(state))
 
         # 去除快捷方式箭头选项
-        remove_arrow_checkbox = QCheckBox(self.tr("快捷图标箭头"), dialog)
+        remove_arrow_checkbox = QCheckBox(self.tr("quick_icon_arrow"), dialog)
         remove_arrow_checkbox.setChecked(self.config.get("remove_arrow", False))  # 从配置中读取
         remove_arrow_checkbox.stateChanged.connect(
             lambda state: self.toggle_remove_arrow(state == Qt.Checked)
@@ -663,11 +679,11 @@ class QuickLaunchApp(QMainWindow):
         language_combobox.setCurrentText(self.config.get("language", "中文"))
         language_combobox.currentTextChanged.connect(self.change_language)
 
-        # 语言切换时立即刷新设置窗口
         def refresh_settings_ui():
             """切换语言后刷新设置窗口"""
             language_label.setText(self.tr("language"))
             show_extensions_checkbox.setText(self.tr("show_extensions"))
+            remove_arrow_checkbox.setText(self.tr("quick_icon_arrow"))
             dialog.setWindowTitle(self.tr("settings"))
 
         language_combobox.currentTextChanged.connect(lambda: refresh_settings_ui())
@@ -685,7 +701,7 @@ class QuickLaunchApp(QMainWindow):
         layout.addStretch()
 
         # 添加网页链接样式的 QLabel
-        website_label = QLabel("<a href='https://www.baidu.com'>baidu.com</a>", dialog)
+        website_label = QLabel("<a href='https://github.com/AstraSolis'>AstraSolis</a>", dialog)
         website_label.setTextInteractionFlags(Qt.TextBrowserInteraction)  # 设置为超链接可点击
         website_label.setOpenExternalLinks(True)  # 启用外部链接点击自动打开浏览器
         website_label.setAlignment(Qt.AlignHCenter)  # 居中放置
@@ -721,7 +737,7 @@ class QuickLaunchApp(QMainWindow):
         self.setWindowTitle(self.tr("title"))
         self.add_file_button.setText(self.tr("add_file"))
         self.settings_button.setText(self.tr("settings"))
-
+        self.update_file_list()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
