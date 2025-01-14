@@ -526,6 +526,7 @@ class QuickLaunchApp(QMainWindow):
 
         # 保存配置到文件
         self.save_config()
+        self.retranslate_ui()
 
     def add_remark(self, items):
         """添加备注"""
