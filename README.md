@@ -49,8 +49,10 @@
 ---
 
 ## 💻 安装与运行
+<h3>普通用户在[Releases](https://github.com/AstraSolis/QuickStart/releases/)下载最新QuickStart.exe到文件夹，双击运行即可</h3>
+<h4>注意软件运行时会生成config.json，应用的文件信息都保存在这里<h4>
 
-### 环境要求
+### 环境要求(Python Source Code)
 
 - **Python 3.7+**
 - **Windows 操作系统**（支持管理员权限运行）
