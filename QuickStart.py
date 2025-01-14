@@ -48,7 +48,7 @@ class QuickLaunchApp(QMainWindow):
                 "input_params": "请输入启动参数：",
                 "show_extensions": "显示文件后缀名",
                 "language": "语言",
-                "quick_icon_arrow": "快捷图标箭头"
+                "quick_icon_arrow": "取消快捷图标箭头"
             },
             "English": {
                 "title": "Quick Launch Files",
@@ -92,6 +92,9 @@ class QuickLaunchApp(QMainWindow):
         self.file_list_widget.setContextMenuPolicy(Qt.CustomContextMenu)
         self.file_list_widget.customContextMenuRequested.connect(self.show_context_menu)
         self.file_list_widget.itemDoubleClicked.connect(self.handle_double_click)
+
+        self.file_list_widget.setDragDropMode(QAbstractItemView.InternalMove)  # 启用内部拖拽
+        self.file_list_widget.model().rowsMoved.connect(self.update_order_after_drag)  # 监听拖拽事件
 
         # 添加文件按钮
         self.add_file_button = QPushButton(self.tr("add_file"), self)
@@ -200,6 +203,22 @@ class QuickLaunchApp(QMainWindow):
                 self.add_files_from_list(files)  # 调用统一的文件添加逻辑
         except Exception as e:
             print(f"拖拽处理时出错: {e}")
+
+    def update_order_after_drag(self, parent, start, end, destination, row):
+        """在拖拽排序完成后更新配置文件"""
+        # 获取当前文件列表的顺序
+        new_order = []
+        for index in range(self.file_list_widget.count()):
+            item = self.file_list_widget.item(index)
+            file_path = item.toolTip()  # 使用工具提示存储文件路径
+            for file_info in self.config["files"]:
+                if file_info["path"] == file_path:
+                    new_order.append(file_info)
+                    break
+
+        # 更新配置中的文件列表顺序
+        self.config["files"] = new_order
+        self.save_config()
 
     def add_files(self):
         """通过对话框添加文件"""
