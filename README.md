@@ -22,7 +22,7 @@
 
 <div align="center">
     <h2>📸 使用截图</h2>
-  ![主界面](https://github.com/user-attachments/assets/529e50af-fefc-4f06-bd1c-33559979d1b8)
+[![主界面](https://github.com/user-attachments/assets/529e50af-fefc-4f06-bd1c-33559979d1b8)]
 </div>
 
 ---
@@ -49,7 +49,7 @@
 ---
 
 ## 💻 安装与运行
-<h3>普通用户在[Releases](https://github.com/AstraSolis/QuickStart/releases/) 下载最新QuickStart.exe到文件夹，双击运行即可</h3>
+<h3>普通用户在[[Releases](https://github.com/AstraSolis/QuickStart/releases/)]下载最新QuickStart.exe到文件夹，双击运行即可</h3>
 <h4>注意软件运行时会生成config.json，应用的文件信息都保存在这里<h4>
 
 ### 环境要求(Python Source Code)
