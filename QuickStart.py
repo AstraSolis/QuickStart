@@ -3,7 +3,7 @@
 import os
 import sys
 import json
-import ctypes
+import subprocess
 
 # 第三方库导入
 from win32com.client import Dispatch
@@ -14,9 +14,154 @@ from PyQt5.QtGui import QIcon, QPixmap, QFont, QKeyEvent
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QListWidget, QVBoxLayout, QPushButton, QHBoxLayout,
     QWidget, QListWidgetItem, QAbstractItemView, QMenu, QMessageBox, QInputDialog,
-    QFileDialog, QDialog, QLabel, QCheckBox, QComboBox, QDialogButtonBox, QFileIconProvider
+    QFileDialog, QDialog, QLabel, QCheckBox, QComboBox, QDialogButtonBox, QFileIconProvider,
+    QLineEdit
 )
 
+
+class FileFolderDialog(QDialog):
+    def __init__(self, parent=None, language_data=None, config=None):
+        super().__init__(parent)
+        try:
+            self.language_data = language_data  # 接收并设置语言数据
+            self.config = config if config else {"language": "中文"}  # 如果没有提供 config，则默认为语言设置
+            # print(f"Config received: {self.config}")
+            self.setWindowTitle(self.tr("select_file_or_folder"))  # 设置窗口标题
+            self.setMinimumWidth(300)
+        except Exception as e:
+            print(f"Error during FileFolderDialog initialization: {e}")
+
+
+        # 布局
+        layout = QVBoxLayout()
+
+        # 文件选择按钮
+        self.file_button = QPushButton(self.tr("select_file"))
+        self.file_button.clicked.connect(self.select_file)
+        layout.addWidget(self.file_button)
+
+        # 文件夹选择按钮
+        self.folder_button = QPushButton(self.tr("select_folder"))
+        self.folder_button.clicked.connect(self.select_folder)
+        layout.addWidget(self.folder_button)
+
+        # 显示选项复选框
+        self.checkbox = QCheckBox(self.tr("only_show_folders"))
+        self.checkbox.stateChanged.connect(self.toggle_mode)
+        layout.addWidget(self.checkbox)
+
+        # 文件筛选功能
+        filter_layout = QHBoxLayout()
+
+        # 启用筛选复选框
+        self.enable_filter_checkbox = QCheckBox(self.tr("file_filter"))
+        self.enable_filter_checkbox.stateChanged.connect(self.toggle_filter)
+        filter_layout.addWidget(self.enable_filter_checkbox)
+
+        # 输入框，允许用户输入多个后缀名，支持逗号和空格分隔
+        self.filter_input = QLineEdit(self)
+        self.filter_input.setPlaceholderText(self.tr("filter_placeholder"))
+        self.filter_input.setEnabled(False)  # 默认禁用
+        filter_layout.addWidget(self.filter_input)
+
+        layout.addLayout(filter_layout)
+
+        # 显示已选择内容
+        self.selected_label = QLabel(self.tr("selected_files_none"))
+        layout.addWidget(self.selected_label)
+
+        # 确认与取消按钮
+        button_layout = QHBoxLayout()
+        self.confirm_button = QPushButton(self.tr("confirm"))
+        self.confirm_button.clicked.connect(self.accept)
+        button_layout.addWidget(self.confirm_button)
+
+        self.cancel_button = QPushButton(self.tr("cancel"))
+        self.cancel_button.clicked.connect(self.reject)
+        button_layout.addWidget(self.cancel_button)
+
+        layout.addLayout(button_layout)
+        self.setLayout(layout)
+
+        # 存储选择的路径
+        self.selected_paths = []
+
+    def tr(self, key):
+        """翻译文字"""
+        language = self.config.get("language", "中文")
+        return self.language_data.get(language, {}).get(key, key)
+
+    def retranslate_ui(self):
+        """更新对话框中的文本"""
+        language = self.config.get("language", "中文")  # 确保获取正确的语言
+        self.setWindowTitle(self.tr("select_file_or_folder"))
+        self.file_button.setText(self.tr("select_file"))
+        self.folder_button.setText(self.tr("select_folder"))
+        self.checkbox.setText(self.tr("only_show_folders"))
+        self.enable_filter_checkbox.setText(self.tr("file_filter"))
+        self.filter_input.setPlaceholderText(self.tr("filter_placeholder"))
+        self.selected_label.setText(self.tr("selected_files_none"))
+        self.confirm_button.setText(self.tr("confirm"))
+        self.cancel_button.setText(self.tr("cancel"))
+
+    def select_file(self):
+        """选择文件，支持文件类型过滤"""
+        file_filter = self.get_file_filter()
+        files, _ = QFileDialog.getOpenFileNames(
+            self,
+            self.tr("select_file"),  # 对话框标题
+            "",  # 起始路径，可以设置为某个目录，如 "C:/"
+            file_filter  # 动态生成的文件过滤器
+        )
+        if files:
+            self.selected_paths = files
+            self.selected_label.setText(f"{self.tr('selected_files')}: {', '.join(self.selected_paths)}")
+
+    def select_folder(self):
+        """选择文件夹"""
+        folder = QFileDialog.getExistingDirectory(
+            self,
+            self.tr("select_folder"),  # 对话框标题
+            ""  # 起始路径，可以设置为某个目录，如 "C:/"
+        )
+        if folder:
+            self.selected_paths = [folder]
+            self.selected_label.setText(f"{self.tr('selected_files')}: {folder}")
+
+    def toggle_mode(self, state):
+        """切换仅显示文件夹模式"""
+        if state == Qt.Checked:
+            self.file_button.setEnabled(False)  # 禁用选择文件按钮
+            self.folder_button.setEnabled(True)  # 启用选择文件夹按钮
+            self.enable_filter_checkbox.setChecked(False)  # 取消勾选文件筛选复选框
+        else:
+            self.file_button.setEnabled(True)  # 启用选择文件按钮
+            self.folder_button.setEnabled(True)  # 启用选择文件夹按钮
+
+    def toggle_filter(self, state):
+        """切换文件筛选功能"""
+        # 如果勾选复选框，启用输入框
+        if state == Qt.Checked:
+            self.filter_input.setEnabled(True)
+            self.file_button.setEnabled(True)
+            self.folder_button.setEnabled(False)  # 禁用选择文件夹按钮
+            self.checkbox.setChecked(False)  # 关闭另一个复选框（仅显示文件夹复选框）
+        else:
+            self.filter_input.setEnabled(False)
+            self.file_button.setEnabled(True)
+            self.folder_button.setEnabled(True)  # 恢复选择文件夹按钮
+
+    def get_file_filter(self):
+        """获取文件筛选过滤器"""
+        filter_input_text = self.filter_input.text().strip()
+        if filter_input_text:
+            # 处理多个后缀名，以空格或逗号分隔
+            extensions = [ext.strip() for ext in filter_input_text.replace(',', ' ').split()]
+            file_filter = self.tr("file_types") + " (" + " ".join([f"*{ext}" for ext in extensions]) + ")"
+        else:
+            file_filter = self.tr("all_files")  # 默认显示所有文件
+
+        return file_filter
 
 
 class QuickLaunchApp(QMainWindow):
@@ -25,8 +170,6 @@ class QuickLaunchApp(QMainWindow):
         self.setAcceptDrops(True) # 启用拖拽功能
         self.config = {"files": [], "show_extensions": True, "language": "中文"}
         self.icon_provider = QFileIconProvider() # 初始化文件图标提供器
-
-
 
         # 多语言数据
         self.language_data = {
@@ -48,7 +191,19 @@ class QuickLaunchApp(QMainWindow):
                 "input_params": "请输入启动参数：",
                 "show_extensions": "显示文件后缀名",
                 "language": "语言",
-                "quick_icon_arrow": "取消快捷图标箭头"
+                "quick_icon_arrow": "快捷图标箭头",
+                "select_file_or_folder": "选择文件或文件夹",
+                "select_file": "选择文件",
+                "select_folder": "选择文件夹",
+                "only_show_folders": "仅显示文件夹",
+                "file_filter": "文件筛选",
+                "filter_placeholder": "如 .txt, .exe 或 .txt .exe",
+                "selected_files_none": "已选择: 无",
+                "selected_files": "已选择文件",
+                "confirm": "确认",
+                "cancel": "取消",
+                "file_types": "文件类型",
+                "all_files": "所有文件 (*.*)"
             },
             "English": {
                 "title": "Quick Launch Files",
@@ -68,10 +223,23 @@ class QuickLaunchApp(QMainWindow):
                 "input_params": "Enter startup parameters:",
                 "show_extensions": "Show File Extensions",
                 "language": "Language",
-                "quick_icon_arrow": "quick icon arrow"
+                "quick_icon_arrow": "quick icon arrow",
+                "select_file_or_folder": "Select File or Folder",
+                "select_file": "Select File",
+                "select_folder": "Select Folder",
+                "only_show_folders": "Only Show Folders",
+                "file_filter": "File Filter",
+                "filter_placeholder": "e.g. .txt, .exe or .txt .exe",
+                "selected_files_none": "Selected: None",
+                "selected_files": "Selected Files",
+                "confirm": "Confirm",
+                "cancel": "Cancel",
+                "file_types": "File Types",
+                "all_files": "All Files (*.*)"
             }
         }
 
+        self.file_folder_dialog = None  # 用于保存 FileFolderDialog 实例
         self.init_ui()  # 初始化界面
         self.load_config()  # 加载配置
         self.retranslate_ui() # 根据加载的语言配置更新界面文本
@@ -129,8 +297,6 @@ class QuickLaunchApp(QMainWindow):
         container = QWidget()
         container.setLayout(main_layout)
         self.setCentralWidget(container)
-
-
 
         # 全局界面美化
         self.setStyleSheet("""
@@ -193,14 +359,16 @@ class QuickLaunchApp(QMainWindow):
     def dropEvent(self, event):
         """处理拖拽放置事件"""
         try:
-            files = []
+            files_and_folders = []
             for url in event.mimeData().urls():
                 file_path = url.toLocalFile()
-                if os.path.isfile(file_path):  # 只处理文件
-                    files.append(file_path)
 
-            if files:
-                self.add_files_from_list(files)  # 调用统一的文件添加逻辑
+                # 如果是文件或文件夹，都加入列表
+                if os.path.exists(file_path):
+                    files_and_folders.append(file_path)
+
+            if files_and_folders:
+                self.add_files_from_list(files_and_folders)  # 调用统一的文件添加逻辑
         except Exception as e:
             print(f"拖拽处理时出错: {e}")
 
@@ -221,10 +389,17 @@ class QuickLaunchApp(QMainWindow):
         self.save_config()
 
     def add_files(self):
-        """通过对话框添加文件"""
-        files, _ = QFileDialog.getOpenFileNames(self, "选择文件")
-        if files:
-            self.add_files_from_list(files)  # 调用统一的文件添加逻辑
+        """通过对话框添加文件或文件夹"""
+        try:
+            # 只传递语言配置
+            language_config = {"language": self.config.get("language", "中文")}
+            dialog = FileFolderDialog(self, language_data=self.language_data, config=language_config)  # 只传递语言设置
+            dialog.retranslate_ui()  # 强制更新对话框文本
+            if dialog.exec_():
+                selected_paths = dialog.selected_paths
+                self.add_files_from_list(selected_paths)
+        except Exception as e:
+            print(f"Error occurred while adding files: {e}")
 
     def add_files_from_list(self, files):
         """从文件列表添加文件，并更新列表和配置"""
@@ -242,6 +417,8 @@ class QuickLaunchApp(QMainWindow):
                 continue
 
             try:
+                # 判断是文件还是文件夹
+                is_dir = os.path.isdir(file_path)
                 # 获取文件图标
                 icon = self.icon_provider.icon(QFileInfo(file_path))
 
@@ -255,6 +432,7 @@ class QuickLaunchApp(QMainWindow):
                 self.config["files"].append({
                     "name": os.path.basename(file_path),
                     "path": file_path,
+                    "is_dir": is_dir, # True表示路径是一个文件夹，False表示是文件
                     "remark": "",
                     "admin": False,
                     "params": ""
@@ -326,8 +504,6 @@ class QuickLaunchApp(QMainWindow):
             # 返回一个空图标以防止程序崩溃
             return QIcon()
 
-        # 如果解析失败或文件不是 .url，返回默认图标
-        return self.icon_provider.icon(QFileInfo(file_path))
 
     def get_all_list_items(self):
         """获取列表中的所有项目"""
@@ -351,8 +527,16 @@ class QuickLaunchApp(QMainWindow):
             try:
                 with open("config.json", "r", encoding="utf-8") as f:
                     self.config = json.load(f)
+                # 在加载配置后，更新语言数据
+                self.language_data = self.config.get("language_data", self.language_data)
             except Exception as e:
                 QMessageBox.warning(self, self.tr("error"), str(e))
+        else:
+            # 如果配置文件不存在，给出默认配置
+            self.config["language"] = "中文"  # 默认语言
+
+        self.update_file_list()
+        self.retranslate_ui()  # 确保语言和文件列表同步更新
 
         # 检查配置完整性
         valid_files = []
@@ -485,7 +669,7 @@ class QuickLaunchApp(QMainWindow):
             self.open_file(file_info, admin=admin)
 
     def open_file(self, file_info, admin=None):
-        """打开单个文件"""
+        """打开单个文件或文件夹"""
         file_path = file_info["path"]
         params = file_info.get("params", "")
 
@@ -498,6 +682,9 @@ class QuickLaunchApp(QMainWindow):
             return
 
         try:
+            if file_info.get("is_dir", False):
+                # 打开文件夹
+                os.startfile(file_path)
             if admin:
                 # 以管理员权限运行
                 shell.ShellExecuteEx(
@@ -508,8 +695,11 @@ class QuickLaunchApp(QMainWindow):
                     nShow=1
                 )
             else:
-                # 普通方式运行
-                os.startfile(file_path)
+                # 普通方式运行（使用 subprocess）
+                if params:
+                    subprocess.Popen([file_path, params])  # 使用参数启动
+                else:
+                    subprocess.Popen([file_path])  # 没有参数时直接启动
         except Exception as e:
             QMessageBox.critical(self, self.tr("error"), f"无法打开文件：{e}")
 
@@ -622,7 +812,7 @@ class QuickLaunchApp(QMainWindow):
                 # 提取文件名和备注
                 remark = file_info.get("remark", "")
                 file_name = os.path.basename(file_path)
-                if not show_extensions:
+                if not show_extensions and not file_info.get("is_dir", False):
                     file_name = os.path.splitext(file_name)[0]
 
                 # 构建显示名称
@@ -666,9 +856,15 @@ class QuickLaunchApp(QMainWindow):
             try:
                 with open("config.json", "r", encoding="utf-8") as f:
                     self.config = json.load(f)
+                # 在加载配置后，更新语言数据
+                self.language_data = self.config.get("language_data", self.language_data)
             except Exception as e:
                 QMessageBox.warning(self, self.tr("error"), str(e))
+        else:
+            # 如果配置文件不存在，给出默认配置
+            self.config["language"] = "中文"  # 默认语言
         self.update_file_list()
+        self.retranslate_ui()  # 确保语言和文件列表同步更新
 
     def show_settings(self):
         """显示设置窗口"""
@@ -737,7 +933,7 @@ class QuickLaunchApp(QMainWindow):
 
     def toggle_remove_arrow(self, enable):
         """切换是否去掉快捷方式箭头"""
-        self.config["remove_arrow"] = enable
+        self.config["remove_arrow"] = not enable
         self.save_config()  # 保存配置
         self.update_file_list()  # 重新加载列表，更新图标
 
@@ -745,7 +941,14 @@ class QuickLaunchApp(QMainWindow):
         """切换语言"""
         self.config["language"] = language
         self.save_config()  # 保存新语言到配置文件
+        print(f"Language changed to: {language}")  # 调试输出
         self.retranslate_ui()  # 重新翻译并刷新UI
+
+        # 在语言切换时，确保更新 FileFolderDialog 的语言数据并强制刷新文本
+        if self.file_folder_dialog:
+            self.file_folder_dialog.language_data = self.language_data  # 更新 language_data
+            print(f"Updated language data in FileFolderDialog: {self.language_data}")  # 调试输出
+            self.file_folder_dialog.retranslate_ui()  # 强制刷新对话框中的文本
 
     def open_website(self, url):
         """打开指定网址"""
