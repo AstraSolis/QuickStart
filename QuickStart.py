@@ -18,6 +18,18 @@ from PyQt5.QtWidgets import (
     QLineEdit
 )
 
+# 检查程序是否在打包后环境中运行
+if getattr(sys, 'frozen', False):  # 如果是打包后的可执行文件
+    image_folder = os.path.join(sys._MEIPASS, 'images')  # 获取图片文件夹路径
+else:
+    image_folder = 'Icon'  # 如果是开发环境，使用相对路径
+
+# 加载图标和图片
+icon_path = os.path.join(image_folder, 'icon.ico')
+folder_path = os.path.join(image_folder, 'folder.png')
+window_path = os.path.join(image_folder, 'window.png')
+settings_path = os.path.join(image_folder, 'settings.png')
+
 
 class FileFolderDialog(QDialog):
     def __init__(self, parent=None, language_data=None, config=None):
@@ -25,7 +37,7 @@ class FileFolderDialog(QDialog):
         try:
             self.language_data = language_data  # 接收并设置语言数据
             self.config = config if config else {"language": "中文"}  # 如果没有提供 config，则默认为语言设置
-            # print(f"Config received: {self.config}")
+            self.setWindowIcon(QIcon(folder_path))  # 选择文件菜单图标
             self.setWindowTitle(self.tr("select_file_or_folder"))  # 设置窗口标题
             self.setMinimumWidth(300)
         except Exception as e:
@@ -170,11 +182,12 @@ class QuickLaunchApp(QMainWindow):
         self.setAcceptDrops(True) # 启用拖拽功能
         self.config = {"files": [], "show_extensions": True, "language": "中文"}
         self.icon_provider = QFileIconProvider() # 初始化文件图标提供器
+        self.setWindowIcon(QIcon(window_path))  # 窗口图标
 
         # 多语言数据
         self.language_data = {
             "中文": {
-                "title": "快捷启动文件",
+                "title": "快捷启动",
                 "add_file": "添加文件",
                 "settings": "设置",
                 "select_files": "选择文件",
@@ -206,7 +219,7 @@ class QuickLaunchApp(QMainWindow):
                 "all_files": "所有文件 (*.*)"
             },
             "English": {
-                "title": "Quick Launch Files",
+                "title": "Quick Launch",
                 "add_file": "Add File",
                 "settings": "Settings",
                 "select_files": "Select Files",
@@ -844,6 +857,7 @@ class QuickLaunchApp(QMainWindow):
         """显示设置窗口"""
         dialog = QDialog(self)
         dialog.setWindowTitle(self.tr("settings"))
+        dialog.setWindowIcon(QIcon(settings_path)) # 设置菜单图标
         dialog.setFixedSize(250, 150)
 
         # 创建主布局
@@ -943,4 +957,3 @@ if __name__ == "__main__":
     window.show()
     sys.exit(app.exec_())
 
-# 测试
