@@ -191,7 +191,7 @@ class QuickLaunchApp(QMainWindow):
                 "input_params": "请输入启动参数：",
                 "show_extensions": "显示文件后缀名",
                 "language": "语言",
-                "quick_icon_arrow": "快捷图标箭头",
+                "quick_icon_arrow": "取消快捷图标箭头",
                 "select_file_or_folder": "选择文件或文件夹",
                 "select_file": "选择文件",
                 "select_folder": "选择文件夹",
@@ -517,38 +517,10 @@ class QuickLaunchApp(QMainWindow):
             self.config["files"] = list(unique_files.values())
 
             with open("config.json", "w", encoding="utf-8") as f:
-                json.dump(self.config, f, indent=4, ensure_ascii=False)
+                json.dump(self.config, f, indent=4, ensure_ascii=False)  # 确保保存 remove_arrow 状态
         except Exception as e:
             print(f"保存配置文件时出错: {e}")
 
-    def load_config(self):
-        """加载配置从 config.json"""
-        if os.path.exists("config.json"):
-            try:
-                with open("config.json", "r", encoding="utf-8") as f:
-                    self.config = json.load(f)
-                # 在加载配置后，更新语言数据
-                self.language_data = self.config.get("language_data", self.language_data)
-            except Exception as e:
-                QMessageBox.warning(self, self.tr("error"), str(e))
-        else:
-            # 如果配置文件不存在，给出默认配置
-            self.config["language"] = "中文"  # 默认语言
-
-        self.update_file_list()
-        self.retranslate_ui()  # 确保语言和文件列表同步更新
-
-        # 检查配置完整性
-        valid_files = []
-        for file_info in self.config.get("files", []):
-            if "path" in file_info and os.path.exists(file_info["path"]):
-                valid_files.append(file_info)
-            else:
-                print(f"无效的文件配置或路径：{file_info}")
-        self.config["files"] = valid_files
-
-        # 更新文件列表
-        self.update_file_list()
 
     def update_file_list(self):
         """更新文件列表显示"""
@@ -863,6 +835,8 @@ class QuickLaunchApp(QMainWindow):
         else:
             # 如果配置文件不存在，给出默认配置
             self.config["language"] = "中文"  # 默认语言
+            self.config["remove_arrow"] = False  # 默认设置为不移除快捷方式箭头
+
         self.update_file_list()
         self.retranslate_ui()  # 确保语言和文件列表同步更新
 
@@ -933,7 +907,7 @@ class QuickLaunchApp(QMainWindow):
 
     def toggle_remove_arrow(self, enable):
         """切换是否去掉快捷方式箭头"""
-        self.config["remove_arrow"] = not enable
+        self.config["remove_arrow"] = enable
         self.save_config()  # 保存配置
         self.update_file_list()  # 重新加载列表，更新图标
 
