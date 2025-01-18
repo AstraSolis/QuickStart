@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="15a7cc59-78e5-4ca0-9672-c9bdc1b03113" name="更改" comment="优化配置文件相关代码，路径无效自动删除">
+    <list default="true" id="15a7cc59-78e5-4ca0-9672-c9bdc1b03113" name="更改" comment="修复files为空引发的报错">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/QuickStart.py" beforeDir="false" afterPath="$PROJECT_DIR$/QuickStart.py" afterDir="false" />
     </list>
@@ -379,7 +379,15 @@
       <option name="project" value="LOCAL" />
       <updated>1737193524421</updated>
     </task>
-    <option name="localTasksCounter" value="20" />
+    <task id="LOCAL-00020" summary="修复files为空引发的报错">
+      <option name="closed" value="true" />
+      <created>1737202416702</created>
+      <option name="number" value="00020" />
+      <option name="presentableId" value="LOCAL-00020" />
+      <option name="project" value="LOCAL" />
+      <updated>1737202416702</updated>
+    </task>
+    <option name="localTasksCounter" value="21" />
     <servers />
   </component>
   <component name="UnknownFeatures">
@@ -427,6 +435,7 @@
     <MESSAGE value="增加图标" />
     <MESSAGE value="优化保存提取配置文件代码" />
     <MESSAGE value="优化配置文件相关代码，路径无效自动删除" />
-    <option name="LAST_COMMIT_MESSAGE" value="优化配置文件相关代码，路径无效自动删除" />
+    <MESSAGE value="修复files为空引发的报错" />
+    <option name="LAST_COMMIT_MESSAGE" value="修复files为空引发的报错" />
   </component>
 </project>

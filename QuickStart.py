@@ -674,7 +674,14 @@ class QuickLaunchApp(QMainWindow):
                 toggle_admin_action = menu.addAction(self.tr("administrator"))
 
             location_action = menu.addAction(self.tr("open_location"))  # 打开文件所在位置
-            params_action = menu.addAction(self.tr("add_params"))  # 添加启动参数
+
+            # 定义 params_action 变量，默认为 None
+            params_action = None
+
+            # 判断文件类型是否为 .exe，只有 .exe 文件才显示启动参数
+            file_path = first_file.get("path", "")
+            if file_path.endswith(".exe"):
+                params_action = menu.addAction(self.tr("add_params"))  # 添加启动参数
 
             # 显示菜单并获取用户选择的动作
             action = menu.exec_(self.file_list_widget.mapToGlobal(pos))
@@ -688,7 +695,7 @@ class QuickLaunchApp(QMainWindow):
                 self.toggle_admin(selected_items)  # 切换管理员权限
             elif action == location_action:
                 self.open_file_location(selected_items[0])
-            elif action == params_action:
+            elif params_action and action == params_action:  # 只有 params_action 被添加且用户选择时才处理
                 self.add_params(selected_items)
 
         except Exception as e:
@@ -738,11 +745,11 @@ class QuickLaunchApp(QMainWindow):
                     nShow=1
                 )
             else:
-                # 普通方式运行（使用 subprocess）
+                # 普通方式运行
                 if params:
                     subprocess.Popen([file_path, params])  # 使用参数启动
                 else:
-                    subprocess.Popen([file_path])  # 没有参数时直接启动
+                    os.startfile(file_path)  # 没有参数时直接启动
         except Exception as e:
             QMessageBox.critical(self, self.tr("error"), f"无法打开文件：{e}")
 
