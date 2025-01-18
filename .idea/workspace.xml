@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="15a7cc59-78e5-4ca0-9672-c9bdc1b03113" name="更改" comment="优化保存提取配置文件代码">
+    <list default="true" id="15a7cc59-78e5-4ca0-9672-c9bdc1b03113" name="更改" comment="优化配置文件相关代码，路径无效自动删除">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/QuickStart.py" beforeDir="false" afterPath="$PROJECT_DIR$/QuickStart.py" afterDir="false" />
     </list>
@@ -76,7 +76,6 @@
     <option name="myCommands">
       <command value=".venv\Scripts\activate" />
       <command value="python.exe -m pip install --upgrade pip " />
-      <command value="pip install pywin32 " />
       <command value="pip install tkinterdnd2" />
       <command value="pip install tkinterdnd2 " />
       <command value="pip install customtkinter tkinterdnd2 pillow pywin32" />
@@ -110,7 +109,6 @@
       <command value="python -m pip show PyQt5" />
       <command value="pip install PyQt5-sip" />
       <command value="pip install pyqt5" />
-      <command value="pip install pywin32" />
       <command value="pip " />
       <command value="pip install PyQt5 pywin32" />
       <command value="pip install pyinstaller" />
@@ -128,6 +126,8 @@
       <command value="pyinstaller --onefile --windowed --icon=63.ico QuickStart.py" />
       <command value="pyinstaller --onefile --windowed --icon=icon.ico QuickStart.py" />
       <command value="pyinstaller --onefile --windowed --icon=icon/icon.ico QuickStart.py" />
+      <command value="pip install pywin32" />
+      <command value="pip install pywin32 " />
       <command value="pyinstaller QuickStart.spec " />
     </option>
   </component>
@@ -371,7 +371,15 @@
       <option name="project" value="LOCAL" />
       <updated>1737189177089</updated>
     </task>
-    <option name="localTasksCounter" value="19" />
+    <task id="LOCAL-00019" summary="优化配置文件相关代码，路径无效自动删除">
+      <option name="closed" value="true" />
+      <created>1737193524421</created>
+      <option name="number" value="00019" />
+      <option name="presentableId" value="LOCAL-00019" />
+      <option name="project" value="LOCAL" />
+      <updated>1737193524421</updated>
+    </task>
+    <option name="localTasksCounter" value="20" />
     <servers />
   </component>
   <component name="UnknownFeatures">
@@ -418,6 +426,7 @@
     <MESSAGE value="修复快捷方式箭头显示切换" />
     <MESSAGE value="增加图标" />
     <MESSAGE value="优化保存提取配置文件代码" />
-    <option name="LAST_COMMIT_MESSAGE" value="优化保存提取配置文件代码" />
+    <MESSAGE value="优化配置文件相关代码，路径无效自动删除" />
+    <option name="LAST_COMMIT_MESSAGE" value="优化配置文件相关代码，路径无效自动删除" />
   </component>
 </project>

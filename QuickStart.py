@@ -14,7 +14,7 @@ from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QListWidget, QVBoxLayout, QPushButton, QHBoxLayout,
     QWidget, QListWidgetItem, QAbstractItemView, QMenu, QMessageBox, QInputDialog,
     QFileDialog, QDialog, QLabel, QCheckBox, QComboBox, QDialogButtonBox, QFileIconProvider,
-    QLineEdit
+    QLineEdit,QSystemTrayIcon,  QAction
 )
 
 # 检查程序是否在打包后环境中运行
@@ -42,6 +42,10 @@ class ConfigManager:
                 with open(self.config_file, "r", encoding="utf-8") as f:
                     self.config = json.load(f)  # 加载配置到 self.config
 
+                    # 确保配置中有 'files' 键，如果没有则初始化为空列表
+                    if 'files' not in self.config:
+                        self.config['files'] = []
+
                     # 检查并删除无效文件路径
                     self.remove_invalid_files()
 
@@ -49,8 +53,8 @@ class ConfigManager:
                 print(f"加载配置失败: {e}")
         else:
             # 配置文件不存在时使用默认配置
-            self.config = {"language": "中文", "show_extensions": True, "remove_arrow": False}
-            self.config_manager.save_config()  # 保存默认配置
+            self.config = {"language": "中文", "show_extensions": True, "remove_arrow": False, "files": []}
+            self.save_config()  # 保存默认配置
 
     def save_config(self):
         """保存配置"""
@@ -66,9 +70,9 @@ class ConfigManager:
         return self.config.get(key, default)
 
     def set(self, key, value):
-        """设置配置项"""
+        """设置配置项并保存"""
         self.config[key] = value
-        self.config_manager.save_config()  # 更新后保存配置
+        self.save_config()  # 直接调用 save_config() 方法保存配置
 
     def remove_invalid_files(self):
         """移除无效的文件路径"""
