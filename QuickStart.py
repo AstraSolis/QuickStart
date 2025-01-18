@@ -41,6 +41,10 @@ class ConfigManager:
             try:
                 with open(self.config_file, "r", encoding="utf-8") as f:
                     self.config = json.load(f)  # 加载配置到 self.config
+
+                    # 检查并删除无效文件路径
+                    self.remove_invalid_files()
+
             except Exception as e:
                 print(f"加载配置失败: {e}")
         else:
@@ -65,6 +69,25 @@ class ConfigManager:
         """设置配置项"""
         self.config[key] = value
         self.config_manager.save_config()  # 更新后保存配置
+
+    def remove_invalid_files(self):
+        """移除无效的文件路径"""
+        invalid_paths = []
+
+        # 遍历配置中的文件，检查路径有效性
+        for file_info in self.config.get("files", []):
+            file_path = file_info.get("path", "")
+            if not os.path.exists(file_path):
+                invalid_paths.append(file_path)
+
+        if invalid_paths:
+            # 删除无效路径的文件项
+            self.config["files"] = [file_info for file_info in self.config["files"]
+                                    if file_info["path"] not in invalid_paths]
+            print(f"已删除无效文件: {', '.join(invalid_paths)}")  # 调试输出
+
+            # 保存更新后的配置
+            self.save_config()
 
 
 
@@ -460,6 +483,7 @@ class QuickLaunchApp(QMainWindow):
     def add_files_from_list(self, files):
         """从文件列表添加文件，并更新列表和配置"""
         existing_paths = {file_info["path"] for file_info in self.config["files"]}  # 使用集合加速查重
+
         for file_path in files:
             # 跳过重复文件
             if file_path in existing_paths:
