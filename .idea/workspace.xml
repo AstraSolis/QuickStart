@@ -4,11 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="15a7cc59-78e5-4ca0-9672-c9bdc1b03113" name="更改" comment="修复快捷方式箭头显示切换">
-      <change afterPath="$PROJECT_DIR$/Icon/folder.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Icon/icon.ico" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Icon/settings.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Icon/window.png" afterDir="false" />
+    <list default="true" id="15a7cc59-78e5-4ca0-9672-c9bdc1b03113" name="更改" comment="增加图标">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/QuickStart.py" beforeDir="false" afterPath="$PROJECT_DIR$/QuickStart.py" afterDir="false" />
     </list>
@@ -359,7 +355,15 @@
       <option name="project" value="LOCAL" />
       <updated>1737109469781</updated>
     </task>
-    <option name="localTasksCounter" value="17" />
+    <task id="LOCAL-00017" summary="增加图标">
+      <option name="closed" value="true" />
+      <created>1737128575986</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1737128575986</updated>
+    </task>
+    <option name="localTasksCounter" value="18" />
     <servers />
   </component>
   <component name="UnknownFeatures">
@@ -404,6 +408,7 @@
     <MESSAGE value="更新README.md" />
     <MESSAGE value="更新添加文件菜单，添加文件夹支持" />
     <MESSAGE value="修复快捷方式箭头显示切换" />
-    <option name="LAST_COMMIT_MESSAGE" value="修复快捷方式箭头显示切换" />
+    <MESSAGE value="增加图标" />
+    <option name="LAST_COMMIT_MESSAGE" value="增加图标" />
   </component>
 </project>

@@ -8,7 +8,6 @@ import subprocess
 # 第三方库导入
 from win32com.client import Dispatch
 from win32com.shell import shell, shellcon
-import win32gui
 from PyQt5.QtCore import QFileInfo, Qt
 from PyQt5.QtGui import QIcon, QPixmap, QFont, QKeyEvent
 from PyQt5.QtWidgets import (
@@ -29,6 +28,44 @@ icon_path = os.path.join(image_folder, 'icon.ico')
 folder_path = os.path.join(image_folder, 'folder.png')
 window_path = os.path.join(image_folder, 'window.png')
 settings_path = os.path.join(image_folder, 'settings.png')
+
+class ConfigManager:
+    def __init__(self, config_file="config.json"):
+        self.config_file = config_file
+        self.config = {}  # 使用 config 来存储配置
+        self.load_config()  # 加载配置
+
+    def load_config(self):
+        """加载配置"""
+        if os.path.exists(self.config_file):
+            try:
+                with open(self.config_file, "r", encoding="utf-8") as f:
+                    self.config = json.load(f)  # 加载配置到 self.config
+            except Exception as e:
+                print(f"加载配置失败: {e}")
+        else:
+            # 配置文件不存在时使用默认配置
+            self.config = {"language": "中文", "show_extensions": True, "remove_arrow": False}
+            self.config_manager.save_config()  # 保存默认配置
+
+    def save_config(self):
+        """保存配置"""
+        try:
+            with open(self.config_file, "w", encoding="utf-8") as f:
+                json.dump(self.config, f, indent=4, ensure_ascii=False)  # 使用 self.config 来保存配置
+        except Exception as e:
+            print(f"保存配置失败: {e}")
+            QMessageBox.critical(None, "保存失败", f"无法保存配置: {e}")  # 弹窗提示错误
+
+    def get(self, key, default=None):
+        """获取配置项"""
+        return self.config.get(key, default)
+
+    def set(self, key, value):
+        """设置配置项"""
+        self.config[key] = value
+        self.config_manager.save_config()  # 更新后保存配置
+
 
 
 class FileFolderDialog(QDialog):
@@ -180,7 +217,12 @@ class QuickLaunchApp(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setAcceptDrops(True) # 启用拖拽功能
-        self.config = {"files": [], "show_extensions": True, "language": "中文"}
+
+        self.config_manager = ConfigManager()  # 配置管理器实例化
+        self.config_manager.load_config()  # 加载配置
+        self.config = self.config_manager.config  # 获取配置
+
+
         self.icon_provider = QFileIconProvider() # 初始化文件图标提供器
         self.setWindowIcon(QIcon(window_path))  # 窗口图标
 
@@ -209,7 +251,7 @@ class QuickLaunchApp(QMainWindow):
                 "select_file": "选择文件",
                 "select_folder": "选择文件夹",
                 "only_show_folders": "仅显示文件夹",
-                "file_filter": "文件筛选",
+                "file_filter": "文件类型筛选",
                 "filter_placeholder": "如 .txt, .exe 或 .txt .exe",
                 "selected_files_none": "已选择: 无",
                 "selected_files": "已选择文件",
@@ -254,8 +296,9 @@ class QuickLaunchApp(QMainWindow):
 
         self.file_folder_dialog = None  # 用于保存 FileFolderDialog 实例
         self.init_ui()  # 初始化界面
-        self.load_config()  # 加载配置
         self.retranslate_ui() # 根据加载的语言配置更新界面文本
+
+
 
     def tr(self, key):
         """翻译文字"""
@@ -351,7 +394,7 @@ class QuickLaunchApp(QMainWindow):
             text, ok = QInputDialog.getText(self, self.tr("add_params"), self.tr("input_params"), text=current_params)
             if ok:
                 file_info["params"] = text
-        self.save_config()
+        self.config_manager.save_config()
         self.update_file_list()
 
     def keyPressEvent(self, event: QKeyEvent):
@@ -399,7 +442,7 @@ class QuickLaunchApp(QMainWindow):
 
         # 更新配置中的文件列表顺序
         self.config["files"] = new_order
-        self.save_config()
+        self.config_manager.save_config()
 
     def add_files(self):
         """通过对话框添加文件或文件夹"""
@@ -417,7 +460,6 @@ class QuickLaunchApp(QMainWindow):
     def add_files_from_list(self, files):
         """从文件列表添加文件，并更新列表和配置"""
         existing_paths = {file_info["path"] for file_info in self.config["files"]}  # 使用集合加速查重
-
         for file_path in files:
             # 跳过重复文件
             if file_path in existing_paths:
@@ -457,7 +499,7 @@ class QuickLaunchApp(QMainWindow):
                 print(f"添加文件时出错: {e}")
 
         # 保存配置
-        self.save_config()
+        self.config_manager.save_config()
 
         # 刷新界面
         self.update_file_list()
@@ -521,18 +563,6 @@ class QuickLaunchApp(QMainWindow):
     def get_all_list_items(self):
         """获取列表中的所有项目"""
         return [self.file_list_widget.item(i) for i in range(self.file_list_widget.count())]
-
-    def save_config(self):
-        """保存配置到 config.json"""
-        try:
-            # 去重文件列表
-            unique_files = {file_info["path"]: file_info for file_info in self.config["files"]}
-            self.config["files"] = list(unique_files.values())
-
-            with open("config.json", "w", encoding="utf-8") as f:
-                json.dump(self.config, f, indent=4, ensure_ascii=False)  # 确保保存 remove_arrow 状态
-        except Exception as e:
-            print(f"保存配置文件时出错: {e}")
 
 
     def update_file_list(self):
@@ -700,7 +730,7 @@ class QuickLaunchApp(QMainWindow):
             self.update_list_item(item, file_info)
 
         # 保存配置到文件
-        self.save_config()
+        self.config_manager.save_config()
         self.retranslate_ui()
 
     def add_remark(self, items):
@@ -722,7 +752,7 @@ class QuickLaunchApp(QMainWindow):
             except Exception as e:
                 print(f"添加备注时出错：{e}")
 
-        self.save_config()
+        self.config_manager.save_config()
 
     def update_list_item(self, item, file_info):
         """更新单个列表项显示"""
@@ -763,7 +793,7 @@ class QuickLaunchApp(QMainWindow):
         )
         for row in selected_rows:
             del self.config["files"][row]
-        self.save_config()
+        self.config_manager.save_config()
         self.update_file_list()
 
     def open_file_location(self, item):
@@ -835,23 +865,6 @@ class QuickLaunchApp(QMainWindow):
             except Exception as e:
                 print(f"更新文件列表时出错，文件信息：{file_info}, 错误：{e}")
 
-    def load_config(self):
-        """加载配置从 config.json"""
-        if os.path.exists("config.json"):
-            try:
-                with open("config.json", "r", encoding="utf-8") as f:
-                    self.config = json.load(f)
-                # 在加载配置后，更新语言数据
-                self.language_data = self.config.get("language_data", self.language_data)
-            except Exception as e:
-                QMessageBox.warning(self, self.tr("error"), str(e))
-        else:
-            # 如果配置文件不存在，给出默认配置
-            self.config["language"] = "中文"  # 默认语言
-            self.config["remove_arrow"] = False  # 默认设置为不移除快捷方式箭头
-
-        self.update_file_list()
-        self.retranslate_ui()  # 确保语言和文件列表同步更新
 
     def show_settings(self):
         """显示设置窗口"""
@@ -916,19 +929,19 @@ class QuickLaunchApp(QMainWindow):
     def toggle_extensions(self, state):
         """切换显示文件后缀名"""
         self.config["show_extensions"] = state == Qt.Checked
-        self.save_config()
+        self.config_manager.save_config()
         self.update_file_list()
 
     def toggle_remove_arrow(self, enable):
         """切换是否去掉快捷方式箭头"""
         self.config["remove_arrow"] = enable
-        self.save_config()  # 保存配置
+        self.config_manager.save_config()  # 保存配置
         self.update_file_list()  # 重新加载列表，更新图标
 
     def change_language(self, language):
         """切换语言"""
         self.config["language"] = language
-        self.save_config()  # 保存新语言到配置文件
+        self.config_manager.save_config()  # 保存新语言到配置文件
         print(f"Language changed to: {language}")  # 调试输出
         self.retranslate_ui()  # 重新翻译并刷新UI
 
@@ -956,4 +969,3 @@ if __name__ == "__main__":
     window = QuickLaunchApp()
     window.show()
     sys.exit(app.exec_())
-
