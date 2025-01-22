@@ -9,12 +9,11 @@ import subprocess
 from win32com.client import Dispatch
 from win32com.shell import shell, shellcon
 from PyQt5.QtCore import QFileInfo, Qt
-from PyQt5.QtGui import QIcon, QPixmap, QFont, QKeyEvent
+from PyQt5.QtGui import QIcon, QFont, QKeyEvent
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QListWidget, QVBoxLayout, QPushButton, QHBoxLayout,
     QWidget, QListWidgetItem, QAbstractItemView, QMenu, QMessageBox, QInputDialog,
-    QFileDialog, QDialog, QLabel, QCheckBox, QComboBox, QDialogButtonBox, QFileIconProvider,
-    QLineEdit,QSystemTrayIcon,  QAction
+    QFileDialog, QDialog, QLabel, QCheckBox, QComboBox, QFileIconProvider, QLineEdit,
 )
 
 # 检查程序是否在打包后环境中运行
@@ -29,13 +28,16 @@ folder_path = os.path.join(image_folder, 'folder.png')
 window_path = os.path.join(image_folder, 'window.png')
 settings_path = os.path.join(image_folder, 'settings.png')
 
+
 class ConfigManager:
+
     def __init__(self, config_file="config.json"):
         self.config_file = config_file
         self.config = {}  # 使用 config 来存储配置
         self.load_config()  # 加载配置
 
     def load_config(self):
+
         """加载配置"""
         if os.path.exists(self.config_file):
             try:
@@ -53,14 +55,19 @@ class ConfigManager:
                 print(f"加载配置失败: {e}")
         else:
             # 配置文件不存在时使用默认配置
-            self.config = {"language": "中文", "show_extensions": True, "remove_arrow": False, "files": []}
+            self.config = {
+                "language": "中文", "show_extensions": True,
+                "remove_arrow": False, "files": []
+            }
             self.save_config()  # 保存默认配置
 
     def save_config(self):
         """保存配置"""
         try:
             with open(self.config_file, "w", encoding="utf-8") as f:
-                json.dump(self.config, f, indent=4, ensure_ascii=False)  # 使用 self.config 来保存配置
+                json.dump(
+                    self.config, f, indent=4, ensure_ascii=False
+                )   # 使用 self.config 来保存配置
         except Exception as e:
             print(f"保存配置失败: {e}")
             QMessageBox.critical(None, "保存失败", f"无法保存配置: {e}")  # 弹窗提示错误
@@ -86,13 +93,14 @@ class ConfigManager:
 
         if invalid_paths:
             # 删除无效路径的文件项
-            self.config["files"] = [file_info for file_info in self.config["files"]
-                                    if file_info["path"] not in invalid_paths]
+            self.config["files"] = [
+                file_info for file_info in self.config["files"]
+                if file_info["path"] not in invalid_paths
+            ]
             print(f"已删除无效文件: {', '.join(invalid_paths)}")  # 调试输出
 
             # 保存更新后的配置
             self.save_config()
-
 
 
 class FileFolderDialog(QDialog):
@@ -100,13 +108,12 @@ class FileFolderDialog(QDialog):
         super().__init__(parent)
         try:
             self.language_data = language_data  # 接收并设置语言数据
-            self.config = config if config else {"language": "中文"}  # 如果没有提供 config，则默认为语言设置
+            self.config = config if config else {"language": "中文"}
             self.setWindowIcon(QIcon(folder_path))  # 选择文件菜单图标
             self.setWindowTitle(self.tr("select_file_or_folder"))  # 设置窗口标题
             self.setMinimumWidth(300)
         except Exception as e:
             print(f"Error during FileFolderDialog initialization: {e}")
-
 
         # 布局
         layout = QVBoxLayout()
@@ -169,7 +176,6 @@ class FileFolderDialog(QDialog):
 
     def retranslate_ui(self):
         """更新对话框中的文本"""
-        language = self.config.get("language", "中文")  # 确保获取正确的语言
         self.setWindowTitle(self.tr("select_file_or_folder"))
         self.file_button.setText(self.tr("select_file"))
         self.folder_button.setText(self.tr("select_folder"))
@@ -191,7 +197,10 @@ class FileFolderDialog(QDialog):
         )
         if files:
             self.selected_paths = files
-            self.selected_label.setText(f"{self.tr('selected_files')}: {', '.join(self.selected_paths)}")
+            self.selected_label.setText(
+                f"{self.tr('selected_files')}: "
+                f"{', '.join(self.selected_paths)}"
+            )
 
     def select_folder(self):
         """选择文件夹"""
@@ -202,7 +211,9 @@ class FileFolderDialog(QDialog):
         )
         if folder:
             self.selected_paths = [folder]
-            self.selected_label.setText(f"{self.tr('selected_files')}: {folder}")
+            self.selected_label.setText(
+                f"{self.tr('selected_files')}: {folder}"
+            )
 
     def toggle_mode(self, state):
         """切换仅显示文件夹模式"""
@@ -232,8 +243,14 @@ class FileFolderDialog(QDialog):
         filter_input_text = self.filter_input.text().strip()
         if filter_input_text:
             # 处理多个后缀名，以空格或逗号分隔
-            extensions = [ext.strip() for ext in filter_input_text.replace(',', ' ').split()]
-            file_filter = self.tr("file_types") + " (" + " ".join([f"*{ext}" for ext in extensions]) + ")"
+            extensions = [
+                ext.strip()
+                for ext in filter_input_text.replace(',', ' ').split()
+            ]
+            file_filter = (
+                f"{self.tr('file_types')} ("
+                f"{' '.join([f'*{ext}' for ext in extensions])})"
+            )
         else:
             file_filter = self.tr("all_files")  # 默认显示所有文件
 
@@ -243,14 +260,14 @@ class FileFolderDialog(QDialog):
 class QuickLaunchApp(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setAcceptDrops(True) # 启用拖拽功能
+
+        self.setAcceptDrops(True)  # 启用拖拽功能
 
         self.config_manager = ConfigManager()  # 配置管理器实例化
         self.config_manager.load_config()  # 加载配置
         self.config = self.config_manager.config  # 获取配置
 
-
-        self.icon_provider = QFileIconProvider() # 初始化文件图标提供器
+        self.icon_provider = QFileIconProvider()  # 初始化文件图标提供器
         self.setWindowIcon(QIcon(window_path))  # 窗口图标
 
         # 多语言数据
@@ -323,9 +340,7 @@ class QuickLaunchApp(QMainWindow):
 
         self.file_folder_dialog = None  # 用于保存 FileFolderDialog 实例
         self.init_ui()  # 初始化界面
-        self.retranslate_ui() # 根据加载的语言配置更新界面文本
-
-
+        self.retranslate_ui()  # 根据加载的语言配置更新界面文本
 
     def tr(self, key):
         """翻译文字"""
@@ -405,10 +420,10 @@ class QuickLaunchApp(QMainWindow):
             }
             QListWidget:focus {
                 border: none;  /* 移除虚线框 */
-                outline: none;  
+                outline: none;
             }
             QPushButton:focus {
-                outline: none;  
+                outline: none;
             }
         """)
 
@@ -515,7 +530,7 @@ class QuickLaunchApp(QMainWindow):
                 self.config["files"].append({
                     "name": os.path.basename(file_path),
                     "path": file_path,
-                    "is_dir": is_dir, # True表示路径是一个文件夹，False表示是文件
+                    "is_dir": is_dir,  # True表示路径是一个文件夹，False表示是文件
                     "remark": "",
                     "admin": False,
                     "params": ""
@@ -587,11 +602,9 @@ class QuickLaunchApp(QMainWindow):
             # 返回一个空图标以防止程序崩溃
             return QIcon()
 
-
     def get_all_list_items(self):
         """获取列表中的所有项目"""
         return [self.file_list_widget.item(i) for i in range(self.file_list_widget.count())]
-
 
     def update_file_list(self):
         """更新文件列表显示"""
@@ -617,8 +630,11 @@ class QuickLaunchApp(QMainWindow):
                 # 获取备注信息
                 remark = file_info.get("remark", "")
                 # 根据是否显示后缀名来决定文件名的显示格式
-                file_name = os.path.basename(file_path) if show_extensions else \
-                    os.path.splitext(os.path.basename(file_path))[0]
+                file_name = (
+                    os.path.basename(file_path)
+                        if show_extensions
+                        else os.path.splitext(os.path.basename(file_path))[0]
+                )
                 # 如果有备注，用括号包裹显示；否则仅显示文件名
                 display_name = f"{remark} ({file_name})" if remark else file_name
 
@@ -795,8 +811,11 @@ class QuickLaunchApp(QMainWindow):
             # 构造新的显示名称
             show_extensions = self.config.get("show_extensions", True)
             file_path = file_info["path"]
-            file_name = os.path.basename(file_path) if show_extensions else \
-            os.path.splitext(os.path.basename(file_path))[0]
+            file_name = (
+                os.path.basename(file_path)
+                if show_extensions
+                else os.path.splitext(os.path.basename(file_path))[0]
+            )
             remark = file_info.get("remark", "")
             display_name = f"{remark} ({file_name})" if remark else file_name
 
@@ -839,73 +858,15 @@ class QuickLaunchApp(QMainWindow):
         if os.path.exists(folder_path):
             os.startfile(folder_path)
         else:
-            QMessageBox.warning(self, self.tr("error"), self.tr("file_not_found") + f": {folder_path}")
-
-    def update_file_list(self):
-        """更新文件列表显示"""
-        self.file_list_widget.clear()
-        show_extensions = self.config.get("show_extensions", True)
-
-        for file_info in self.config["files"]:
-            try:
-                # 检查 file_info 的完整性
-                if not file_info or "path" not in file_info:
-                    print("跳过无效的文件信息：", file_info)
-                    continue
-
-                # 检查路径是否有效
-                file_path = file_info.get("path", "")
-                if not os.path.exists(file_path):
-                    print(f"文件路径无效，跳过：{file_path}")
-                    continue
-
-                # 提取文件名和备注
-                remark = file_info.get("remark", "")
-                file_name = os.path.basename(file_path)
-                if not show_extensions and not file_info.get("is_dir", False):
-                    file_name = os.path.splitext(file_name)[0]
-
-                # 构建显示名称
-                display_name = file_name
-                if remark:
-                    display_name = f"{remark} ({display_name})"
-
-                # 添加管理员状态和启动参数
-                admin_text = f"[{self.tr('administrator')}]" if file_info.get("admin", False) else ""
-                params = file_info.get("params", "")
-                params_text = f"[{self.tr('add_params')}: {params}]" if params else ""
-
-                # 获取图标并创建列表项
-                try:
-                    icon = self.get_icon(file_path)
-                except Exception as icon_error:
-                    print(f"图标加载失败：{file_path}, 错误：{icon_error}")
-                    icon = QIcon()  # 使用默认空图标
-
-                item = QListWidgetItem()
-                item.setToolTip(file_path)
-                item.setIcon(icon)
-
-                # 格式化显示文本
-                formatted_text = f"{display_name:<50} {admin_text} {params_text}"
-                item.setText(formatted_text.strip())
-
-                # 设置固定宽度字体避免对齐问题
-                font = QFont("Monospace")
-                font.setStyleHint(QFont.Monospace)
-                font.setPointSize(10)
-                item.setFont(font)
-
-                self.file_list_widget.addItem(item)
-            except Exception as e:
-                print(f"更新文件列表时出错，文件信息：{file_info}, 错误：{e}")
-
+            QMessageBox.warning(
+                self, self.tr("error"), self.tr("file_not_found") + f": {folder_path}"
+            )
 
     def show_settings(self):
         """显示设置窗口"""
         dialog = QDialog(self)
         dialog.setWindowTitle(self.tr("settings"))
-        dialog.setWindowIcon(QIcon(settings_path)) # 设置菜单图标
+        dialog.setWindowIcon(QIcon(settings_path))  # 设置菜单图标
         dialog.setFixedSize(250, 150)
 
         # 创建主布局
@@ -983,7 +944,6 @@ class QuickLaunchApp(QMainWindow):
         # 在语言切换时，确保更新 FileFolderDialog 的语言数据并强制刷新文本
         if self.file_folder_dialog:
             self.file_folder_dialog.language_data = self.language_data  # 更新 language_data
-            print(f"Updated language data in FileFolderDialog: {self.language_data}")  # 调试输出
             self.file_folder_dialog.retranslate_ui()  # 强制刷新对话框中的文本
 
     def open_website(self, url):
@@ -998,9 +958,10 @@ class QuickLaunchApp(QMainWindow):
         self.settings_button.setText(self.tr("settings"))
         self.update_file_list()
 
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
 
+if __name__ == "__main__":
+
+    app = QApplication(sys.argv)
     window = QuickLaunchApp()
     window.show()
     sys.exit(app.exec_())
