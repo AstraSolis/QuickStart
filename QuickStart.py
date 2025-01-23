@@ -29,6 +29,23 @@ window_path = os.path.join(image_folder, 'window.png')
 settings_path = os.path.join(image_folder, 'settings.png')
 
 
+class LanguageManager:
+    def __init__(self, lang_file="languages.json"):
+        self.lang_file = lang_file
+        self.languages = self.load_languages()
+
+    def load_languages(self):
+        try:
+            with open(self.lang_file, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"加载语言文件失败: {e}")
+            return {}
+
+    def get_translation(self, language, key):
+        return self.languages.get(language, {}).get(key, key)
+
+
 class ConfigManager:
 
     def __init__(self, config_file="config.json"):
@@ -104,11 +121,13 @@ class ConfigManager:
 
 
 class FileFolderDialog(QDialog):
-    def __init__(self, parent=None, language_data=None, config=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
         try:
-            self.language_data = language_data  # 接收并设置语言数据
-            self.config = config if config else {"language": "中文"}
+            # 获取 LanguageManager 实例并加载当前语言
+            self.language_manager = LanguageManager()
+            self.language = self.parent().config.get("language", "中文")  # 获取父窗口的语言配置
+
             self.setWindowIcon(QIcon(folder_path))  # 选择文件菜单图标
             self.setWindowTitle(self.tr("select_file_or_folder"))  # 设置窗口标题
             self.setMinimumWidth(300)
@@ -171,8 +190,7 @@ class FileFolderDialog(QDialog):
 
     def tr(self, key):
         """翻译文字"""
-        language = self.config.get("language", "中文")
-        return self.language_data.get(language, {}).get(key, key)
+        return self.language_manager.get_translation(self.language, key)
 
     def retranslate_ui(self):
         """更新对话框中的文本"""
@@ -267,76 +285,12 @@ class QuickLaunchApp(QMainWindow):
         self.config_manager.load_config()  # 加载配置
         self.config = self.config_manager.config  # 获取配置
 
+        self.language_manager = LanguageManager()  # 使用新的语言管理类
+        self.language = self.config.get("language", "中文")  # 获取当前语言配置
+        self.setWindowTitle(self.language_manager.get_translation(self.language, "title"))
+
         self.icon_provider = QFileIconProvider()  # 初始化文件图标提供器
         self.setWindowIcon(QIcon(window_path))  # 窗口图标
-
-        # 多语言数据
-        self.language_data = {
-            "中文": {
-                "title": "快捷启动",
-                "add_file": "添加文件",
-                "settings": "设置",
-                "select_files": "选择文件",
-                "error": "错误",
-                "file_not_found": "文件未找到",
-                "administrator": "管理员",
-                "cancel_administrator": "取消管理员",
-                "open_location": "打开文件所在位置",
-                "remark": "备注",
-                "delete": "删除",
-                "confirm_delete": "确定要删除选中的文件吗？",
-                "add_params": "启动参数",
-                "input_remark": "请输入备注：",
-                "input_params": "请输入启动参数：",
-                "show_extensions": "显示文件后缀名",
-                "language": "语言",
-                "quick_icon_arrow": "取消快捷图标箭头",
-                "select_file_or_folder": "选择文件或文件夹",
-                "select_file": "选择文件",
-                "select_folder": "选择文件夹",
-                "only_show_folders": "仅显示文件夹",
-                "file_filter": "文件类型筛选",
-                "filter_placeholder": "如 .txt, .exe 或 .txt .exe",
-                "selected_files_none": "已选择: 无",
-                "selected_files": "已选择文件",
-                "confirm": "确认",
-                "cancel": "取消",
-                "file_types": "文件类型",
-                "all_files": "所有文件 (*.*)"
-            },
-            "English": {
-                "title": "Quick Launch",
-                "add_file": "Add File",
-                "settings": "Settings",
-                "select_files": "Select Files",
-                "error": "Error",
-                "file_not_found": "File not found",
-                "administrator": "administrator",
-                "cancel_administrator": "cancel administrator",
-                "open_location": "Open File Location",
-                "remark": "Remark",
-                "delete": "Delete",
-                "confirm_delete": "Are you sure you want to delete the selected files?",
-                "add_params": "Startup Parameters",
-                "input_remark": "Enter remark:",
-                "input_params": "Enter startup parameters:",
-                "show_extensions": "Show File Extensions",
-                "language": "Language",
-                "quick_icon_arrow": "quick icon arrow",
-                "select_file_or_folder": "Select File or Folder",
-                "select_file": "Select File",
-                "select_folder": "Select Folder",
-                "only_show_folders": "Only Show Folders",
-                "file_filter": "File Filter",
-                "filter_placeholder": "e.g. .txt, .exe or .txt .exe",
-                "selected_files_none": "Selected: None",
-                "selected_files": "Selected Files",
-                "confirm": "Confirm",
-                "cancel": "Cancel",
-                "file_types": "File Types",
-                "all_files": "All Files (*.*)"
-            }
-        }
 
         self.file_folder_dialog = None  # 用于保存 FileFolderDialog 实例
         self.init_ui()  # 初始化界面
@@ -344,8 +298,7 @@ class QuickLaunchApp(QMainWindow):
 
     def tr(self, key):
         """翻译文字"""
-        language = self.config.get("language", "中文")
-        return self.language_data[language].get(key, key)
+        return self.language_manager.get_translation(self.language, key)
 
     def init_ui(self):
         """初始化界面"""
@@ -489,9 +442,7 @@ class QuickLaunchApp(QMainWindow):
     def add_files(self):
         """通过对话框添加文件或文件夹"""
         try:
-            # 只传递语言配置
-            language_config = {"language": self.config.get("language", "中文")}
-            dialog = FileFolderDialog(self, language_data=self.language_data, config=language_config)  # 只传递语言设置
+            dialog = FileFolderDialog(self)
             dialog.retranslate_ui()  # 强制更新对话框文本
             if dialog.exec_():
                 selected_paths = dialog.selected_paths
@@ -632,7 +583,7 @@ class QuickLaunchApp(QMainWindow):
                 # 根据是否显示后缀名来决定文件名的显示格式
                 file_name = (
                     os.path.basename(file_path)
-                        if show_extensions
+                        if   show_extensions
                         else os.path.splitext(os.path.basename(file_path))[0]
                 )
                 # 如果有备注，用括号包裹显示；否则仅显示文件名
@@ -936,9 +887,9 @@ class QuickLaunchApp(QMainWindow):
 
     def change_language(self, language):
         """切换语言"""
+        self.language = language
         self.config["language"] = language
         self.config_manager.save_config()  # 保存新语言到配置文件
-        print(f"Language changed to: {language}")  # 调试输出
         self.retranslate_ui()  # 重新翻译并刷新UI
 
         # 在语言切换时，确保更新 FileFolderDialog 的语言数据并强制刷新文本
