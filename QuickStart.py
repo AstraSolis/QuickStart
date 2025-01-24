@@ -31,7 +31,12 @@ settings_path = os.path.join(image_folder, 'settings.png')
 
 class LanguageManager:
     def __init__(self, lang_file="languages.json"):
-        self.lang_file = lang_file
+
+        # 判断是否在打包环境中
+        if getattr(sys, 'frozen', False):  # 如果是打包后的可执行文件
+            self.lang_file = os.path.join(sys._MEIPASS, lang_file)  # 获取打包后的路径
+        else:
+            self.lang_file = lang_file  # 使用开发环境中的路径
         self.languages = self.load_languages()
 
     def load_languages(self):
@@ -44,6 +49,10 @@ class LanguageManager:
 
     def get_translation(self, language, key):
         return self.languages.get(language, {}).get(key, key)
+
+    def get_available_languages(self):
+        """返回所有可用的语言列表"""
+        return list(self.languages.keys())
 
 
 class ConfigManager:
@@ -585,7 +594,7 @@ class QuickLaunchApp(QMainWindow):
                     os.path.basename(file_path)
                         if   show_extensions
                         else os.path.splitext(os.path.basename(file_path))[0]
-                )
+                    )
                 # 如果有备注，用括号包裹显示；否则仅显示文件名
                 display_name = f"{remark} ({file_name})" if remark else file_name
 
@@ -839,7 +848,12 @@ class QuickLaunchApp(QMainWindow):
         language_layout = QHBoxLayout()
         language_label = QLabel(self.tr("language"), dialog)
         language_combobox = QComboBox(dialog)
-        language_combobox.addItems(["中文", "English"])
+
+        # 获取所有可用的语言
+        available_languages = self.language_manager.get_available_languages()
+        language_combobox.addItems(available_languages)  # 动态加载所有语言
+
+        # 设置当前选择的语言
         language_combobox.setCurrentText(self.config.get("language", "中文"))
         language_combobox.currentTextChanged.connect(self.change_language)
 

@@ -4,10 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="15a7cc59-78e5-4ca0-9672-c9bdc1b03113" name="更改" comment="优化代码">
-      <change afterPath="$PROJECT_DIR$/languages.json" afterDir="false" />
+    <list default="true" id="15a7cc59-78e5-4ca0-9672-c9bdc1b03113" name="更改" comment="多语言支持">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/QuickStart.py" beforeDir="false" afterPath="$PROJECT_DIR$/QuickStart.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/languages.json" beforeDir="false" afterPath="$PROJECT_DIR$/languages.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -129,12 +129,12 @@
       <command value="pyinstaller --onefile --windowed --icon=icon/icon.ico QuickStart.py" />
       <command value="pip install pywin32" />
       <command value="pip install pywin32 " />
-      <command value="pyinstaller QuickStart.spec " />
       <command value="pip install flake8" />
       <command value=" flake8 E:\PythonProject\QuickStart\QuickStart.py." />
       <command value=" flake8 E:\PythonProject\QuickStart\QuickStart.py3" />
       <command value=" flake8 E:\PythonProject\QuickStart\" />
       <command value=" flake8 E:\PythonProject\QuickStart\QuickStart.py" />
+      <command value="pyinstaller QuickStart.spec " />
     </option>
   </component>
   <component name="RunManager">
@@ -409,7 +409,15 @@
       <option name="project" value="LOCAL" />
       <updated>1737560923974</updated>
     </task>
-    <option name="localTasksCounter" value="23" />
+    <task id="LOCAL-00023" summary="多语言支持">
+      <option name="closed" value="true" />
+      <created>1737615805005</created>
+      <option name="number" value="00023" />
+      <option name="presentableId" value="LOCAL-00023" />
+      <option name="project" value="LOCAL" />
+      <updated>1737615805005</updated>
+    </task>
+    <option name="localTasksCounter" value="24" />
     <servers />
   </component>
   <component name="UnknownFeatures">
@@ -460,6 +468,7 @@
     <MESSAGE value="修复files为空引发的报错" />
     <MESSAGE value="修复非.exe文件附带启动参数报错，当右键非.exe文件时不显示启动参数" />
     <MESSAGE value="优化代码" />
-    <option name="LAST_COMMIT_MESSAGE" value="优化代码" />
+    <MESSAGE value="多语言支持" />
+    <option name="LAST_COMMIT_MESSAGE" value="多语言支持" />
   </component>
 </project>
