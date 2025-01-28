@@ -8,7 +8,7 @@ import subprocess
 # 第三方库导入
 from win32com.client import Dispatch
 from win32com.shell import shell, shellcon
-from PyQt5.QtCore import QFileInfo, Qt
+from PyQt5.QtCore import QFileInfo, Qt, pyqtSignal
 from PyQt5.QtGui import QIcon, QFont, QKeyEvent
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QListWidget, QVBoxLayout, QPushButton, QHBoxLayout,
@@ -284,6 +284,106 @@ class FileFolderDialog(QDialog):
         return file_filter
 
 
+class SettingsDialog(QDialog):
+    # 定义信号，用于通知父窗口配置变更
+    language_changed = pyqtSignal(str)          # 语言变更信号
+    show_extensions_changed = pyqtSignal(bool)  # 显示扩展名设置变更信号
+    remove_arrow_changed = pyqtSignal(bool)     # 快捷方式箭头设置变更信号
+
+    def __init__(self, config_manager, language_manager, current_language, parent=None):
+
+        super().__init__(parent)
+        self.config_manager = config_manager       # 存储配置管理对象
+        self.language_manager = language_manager  # 存储语言管理对象
+        self.language = current_language           # 存储当前语言
+
+        # 初始化窗口属性
+        self.setWindowIcon(QIcon(settings_path))
+        self.setFixedSize(250, 150)
+
+        self.init_ui()  # 初始化界面组件
+        self.setup_connections()  # 建立信号槽连接
+
+    def tr(self, key):
+        """翻译文字"""
+        return self.language_manager.get_translation(self.language, key)
+
+    def init_ui(self):
+
+        # 主垂直布局
+        layout = QVBoxLayout(self)
+
+        # 显示后缀名复选框
+        self.show_extensions_checkbox = QCheckBox(self.tr("show_extensions"), self)
+        self.show_extensions_checkbox.setChecked(self.config_manager.get("show_extensions", True))
+        layout.addWidget(self.show_extensions_checkbox)
+
+        # 去除快捷方式箭头复选框
+        self.remove_arrow_checkbox = QCheckBox(self.tr("quick_icon_arrow"), self)
+        self.remove_arrow_checkbox.setChecked(self.config_manager.get("remove_arrow", False))
+        layout.addWidget(self.remove_arrow_checkbox)
+
+        # 语言选择
+        language_layout = QHBoxLayout()
+        self.language_label = QLabel(self.tr("language"), self)
+        self.language_combobox = QComboBox(self)
+        self.language_combobox.addItems(self.language_manager.get_available_languages())
+        self.language_combobox.setCurrentText(self.config_manager.get("language", "中文"))
+        language_layout.addWidget(self.language_label)
+        language_layout.addWidget(self.language_combobox)
+        layout.addLayout(language_layout)
+
+        # 项目地址
+        self.website_label = QLabel()
+        self.website_label.setTextInteractionFlags(Qt.TextBrowserInteraction)
+        self.website_label.setOpenExternalLinks(True)
+
+        # 创建底部布局
+        bottom_layout = QHBoxLayout()
+        bottom_layout.addWidget(self.website_label, alignment=Qt.AlignLeft)  # 左对齐
+        bottom_layout.addStretch()  # 右侧填充
+
+        # 将其他内容推到顶部，链接放到底部
+        layout.addStretch()  # 添加拉伸因子
+        layout.addLayout(bottom_layout)  # 添加底部布局
+
+        self.retranslate_ui()  # 初始化界面文本翻译
+
+    def setup_connections(self):
+        """建立信号与槽的连接"""
+        self.show_extensions_checkbox.stateChanged.connect(self.on_show_extensions_changed)  # 显示扩展名复选框状态变化时更新配置
+        self.remove_arrow_checkbox.stateChanged.connect(self.on_remove_arrow_changed)  # 去除箭头复选框状态变化时更新配置
+        self.language_combobox.currentTextChanged.connect(self.on_language_changed)  # 语言选择变化时更新配置和界面
+
+    def retranslate_ui(self):
+        """动态更新界面文本"""
+        self.setWindowTitle(self.tr("settings"))
+        self.show_extensions_checkbox.setText(self.tr("show_extensions"))
+        self.remove_arrow_checkbox.setText(self.tr("quick_icon_arrow"))
+        self.language_label.setText(self.tr("language"))
+        link_text = self.tr("project_address")
+        self.website_label.setText(f'<a href="https://github.com/AstraSolis">{link_text}</a>')
+
+    def on_show_extensions_changed(self, state):
+        """处理显示扩展名设置变更"""
+        new_state = state == Qt.Checked
+        self.config_manager.set("show_extensions", new_state)
+        self.show_extensions_changed.emit(new_state)  # 发射信号
+
+    def on_remove_arrow_changed(self, state):
+        """处理快捷方式箭头设置变更"""
+        new_state = state == Qt.Checked
+        self.config_manager.set("remove_arrow", new_state)
+        self.remove_arrow_changed.emit(new_state)  # 发射信号
+
+    def on_language_changed(self, language):
+        """处理语言选择变更"""
+        self.config_manager.set("language", language)
+        self.language = language
+        self.retranslate_ui()
+        self.language_changed.emit(language)  # 发射信号
+
+
 class QuickLaunchApp(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -360,32 +460,44 @@ class QuickLaunchApp(QMainWindow):
 
         # 全局界面美化
         self.setStyleSheet("""
+            /* 设置主窗口的样式 */
             QMainWindow {
-                background-color: #F4F4F4;
+                background-color: #F4F4F4;  /* 主窗口背景颜色 - 浅灰色 */
             }
+
+            /* 列表控件基础样式 */
             QListWidget {
-                border: 1px solid #CCCCCC;
-                background: #FFFFFF;
-                font-size: 14px;
-                padding: 5px;
-                border-radius: 5px;
+                background: #FFFFFF;            /* 背景颜色：纯白 */
+                font-size: 14px;                /* 字体大小 */
+                padding: 5px;                   /* 内边距：5像素 */
+                border-radius: 5px;             /* 圆角半径：5像素 */
             }
+
+            /* 列表项基础样式 */
             QListWidget::item {
-                padding: 10px;
+                padding: 10px;                  /* 每个列表项的内边距（增大间距） */
             }
+
+            /* 鼠标悬停效果 */
             QListWidget::item:hover {
-                background: #E6F7FF;
+                background: #E6F7FF;            /* 悬停时的背景色（淡蓝色） */
             }
+
+            /* 选中项样式 */
             QListWidget::item:selected {
-                background: #0078D7;
-                color: white;
+                background: #0078D7;            /* 选中项背景色（微软主题蓝色） */
+                color: white;                   /* 选中项文字颜色 */
             }
+
+            /* 移除列表控件的焦点虚线框 */
             QListWidget:focus {
-                border: none;  /* 移除虚线框 */
-                outline: none;
+                border: none;                   /* 移除焦点时的边框变化 */
+                outline: none;                  /* 移除默认的焦点轮廓线 */
             }
+
+            /* 移除所有按钮的焦点虚线框 */
             QPushButton:focus {
-                outline: none;
+                outline: none;                  /* 移除按钮获得焦点时的轮廓线 */
             }
         """)
 
@@ -592,9 +704,9 @@ class QuickLaunchApp(QMainWindow):
                 # 根据是否显示后缀名来决定文件名的显示格式
                 file_name = (
                     os.path.basename(file_path)
-                        if   show_extensions
-                        else os.path.splitext(os.path.basename(file_path))[0]
-                    )
+                    if show_extensions
+                    else os.path.splitext(os.path.basename(file_path))[0]
+                )
                 # 如果有备注，用括号包裹显示；否则仅显示文件名
                 display_name = f"{remark} ({file_name})" if remark else file_name
 
@@ -823,98 +935,28 @@ class QuickLaunchApp(QMainWindow):
             )
 
     def show_settings(self):
-        """显示设置窗口"""
-        dialog = QDialog(self)
-        dialog.setWindowTitle(self.tr("settings"))
-        dialog.setWindowIcon(QIcon(settings_path))  # 设置菜单图标
-        dialog.setFixedSize(250, 150)
-
-        # 创建主布局
-        layout = QVBoxLayout(dialog)
-
-        # 显示后缀名选项
-        show_extensions_checkbox = QCheckBox(self.tr("show_extensions"), dialog)
-        show_extensions_checkbox.setChecked(self.config.get("show_extensions", True))
-        show_extensions_checkbox.stateChanged.connect(lambda state: self.toggle_extensions(state))
-
-        # 去除快捷方式箭头选项
-        remove_arrow_checkbox = QCheckBox(self.tr("quick_icon_arrow"), dialog)
-        remove_arrow_checkbox.setChecked(self.config.get("remove_arrow", False))  # 从配置中读取
-        remove_arrow_checkbox.stateChanged.connect(
-            lambda state: self.toggle_remove_arrow(state == Qt.Checked)
+        dialog = SettingsDialog(
+            config_manager=self.config_manager,
+            language_manager=self.language_manager,
+            current_language=self.config.get("language", "中文"),
+            parent=self
         )
+        # 连接所有配置变更信号
+        dialog.language_changed.connect(self.handle_language_changed)
+        dialog.show_extensions_changed.connect(self.handle_show_extensions_changed)
+        dialog.remove_arrow_changed.connect(self.handle_remove_arrow_changed)
+        dialog.exec_()
 
-        # 语言选择部分
-        language_layout = QHBoxLayout()
-        language_label = QLabel(self.tr("language"), dialog)
-        language_combobox = QComboBox(dialog)
-
-        # 获取所有可用的语言
-        available_languages = self.language_manager.get_available_languages()
-        language_combobox.addItems(available_languages)  # 动态加载所有语言
-
-        # 设置当前选择的语言
-        language_combobox.setCurrentText(self.config.get("language", "中文"))
-        language_combobox.currentTextChanged.connect(self.change_language)
-
-        def refresh_settings_ui():
-            """切换语言后刷新设置窗口"""
-            language_label.setText(self.tr("language"))
-            show_extensions_checkbox.setText(self.tr("show_extensions"))
-            remove_arrow_checkbox.setText(self.tr("quick_icon_arrow"))
-            dialog.setWindowTitle(self.tr("settings"))
-
-        language_combobox.currentTextChanged.connect(lambda: refresh_settings_ui())
-
-        # 将语言标签和多选框添加到水平布局
-        language_layout.addWidget(language_label)
-        language_layout.addWidget(language_combobox)
-
-        # 添加到设置窗口的主布局
-        layout.addWidget(show_extensions_checkbox)
-        layout.addWidget(remove_arrow_checkbox)
-        layout.addLayout(language_layout)
-
-        # 添加弹性空间，让链接放置到最底部
-        layout.addStretch()
-
-        # 添加网页链接样式的 QLabel
-        website_label = QLabel("<a href='https://github.com/AstraSolis'>AstraSolis</a>", dialog)
-        website_label.setTextInteractionFlags(Qt.TextBrowserInteraction)  # 设置为超链接可点击
-        website_label.setOpenExternalLinks(True)  # 启用外部链接点击自动打开浏览器
-        website_label.setAlignment(Qt.AlignHCenter)  # 居中放置
-        layout.addWidget(website_label)
-
-        dialog.exec_()  # 显示对话框
-
-    def toggle_extensions(self, state):
-        """切换显示文件后缀名"""
-        self.config["show_extensions"] = state == Qt.Checked
-        self.config_manager.save_config()
-        self.update_file_list()
-
-    def toggle_remove_arrow(self, enable):
-        """切换是否去掉快捷方式箭头"""
-        self.config["remove_arrow"] = enable
-        self.config_manager.save_config()  # 保存配置
-        self.update_file_list()  # 重新加载列表，更新图标
-
-    def change_language(self, language):
-        """切换语言"""
+    def handle_language_changed(self, language):
         self.language = language
-        self.config["language"] = language
-        self.config_manager.save_config()  # 保存新语言到配置文件
-        self.retranslate_ui()  # 重新翻译并刷新UI
+        self.retranslate_ui()  # 刷新界面文字
+        self.update_file_list()  # 刷新文件列表
 
-        # 在语言切换时，确保更新 FileFolderDialog 的语言数据并强制刷新文本
-        if self.file_folder_dialog:
-            self.file_folder_dialog.language_data = self.language_data  # 更新 language_data
-            self.file_folder_dialog.retranslate_ui()  # 强制刷新对话框中的文本
+    def handle_show_extensions_changed(self, state):
+        self.update_file_list()  # 立即刷新文件列表显示
 
-    def open_website(self, url):
-        """打开指定网址"""
-        import webbrowser
-        webbrowser.open(url)
+    def handle_remove_arrow_changed(self, state):
+        self.update_file_list()  # 立即刷新图标显示
 
     def retranslate_ui(self):
         """动态更新界面文字"""

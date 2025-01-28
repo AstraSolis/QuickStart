@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="15a7cc59-78e5-4ca0-9672-c9bdc1b03113" name="更改" comment="多语言支持">
+    <list default="true" id="15a7cc59-78e5-4ca0-9672-c9bdc1b03113" name="更改" comment="优化多语言">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/QuickStart.py" beforeDir="false" afterPath="$PROJECT_DIR$/QuickStart.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/languages.json" beforeDir="false" afterPath="$PROJECT_DIR$/languages.json" afterDir="false" />
@@ -133,8 +133,13 @@
       <command value=" flake8 E:\PythonProject\QuickStart\QuickStart.py." />
       <command value=" flake8 E:\PythonProject\QuickStart\QuickStart.py3" />
       <command value=" flake8 E:\PythonProject\QuickStart\" />
-      <command value=" flake8 E:\PythonProject\QuickStart\QuickStart.py" />
       <command value="pyinstaller QuickStart.spec " />
+      <command value=" flake8 E:\PythonProject\QuickStart\QuickStart.py" />
+      <command value="max-line-length = 100" />
+      <command value="flake8 --max-line-length=120" />
+      <command value=" flake8 E:\PythonProject\QuickStart\QuickStart.py --max-line-length=120" />
+      <command value=" flake8  E:\PythonProject\QuickStart\QuickStart.py" />
+      <command value=" flake8 --max-line-length=120 E:\PythonProject\QuickStart\QuickStart.py" />
     </option>
   </component>
   <component name="RunManager">
@@ -417,7 +422,15 @@
       <option name="project" value="LOCAL" />
       <updated>1737615805005</updated>
     </task>
-    <option name="localTasksCounter" value="24" />
+    <task id="LOCAL-00024" summary="优化多语言">
+      <option name="closed" value="true" />
+      <created>1737706266271</created>
+      <option name="number" value="00024" />
+      <option name="presentableId" value="LOCAL-00024" />
+      <option name="project" value="LOCAL" />
+      <updated>1737706266271</updated>
+    </task>
+    <option name="localTasksCounter" value="25" />
     <servers />
   </component>
   <component name="UnknownFeatures">
@@ -469,6 +482,7 @@
     <MESSAGE value="修复非.exe文件附带启动参数报错，当右键非.exe文件时不显示启动参数" />
     <MESSAGE value="优化代码" />
     <MESSAGE value="多语言支持" />
-    <option name="LAST_COMMIT_MESSAGE" value="多语言支持" />
+    <MESSAGE value="优化多语言" />
+    <option name="LAST_COMMIT_MESSAGE" value="优化多语言" />
   </component>
 </project>
