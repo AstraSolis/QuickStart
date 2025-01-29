@@ -293,6 +293,9 @@ class SettingsDialog(QDialog):
     def __init__(self, config_manager, language_manager, current_language, parent=None):
 
         super().__init__(parent)
+
+        self.version = self._get_version()  # 添加版本号属性
+
         self.config_manager = config_manager       # 存储配置管理对象
         self.language_manager = language_manager  # 存储语言管理对象
         self.language = current_language           # 存储当前语言
@@ -303,6 +306,57 @@ class SettingsDialog(QDialog):
 
         self.init_ui()  # 初始化界面组件
         self.setup_connections()  # 建立信号槽连接
+
+    def _get_git_root(self, path):
+        """查找给定路径的Git根目录（类内部方法）"""
+        path = os.path.abspath(path)
+        while True:
+            if os.path.isdir(os.path.join(path, '.git')):
+                return path
+            parent = os.path.dirname(path)
+            if parent == path:
+                return None  # 到达根目录，未找到
+            path = parent
+
+    def _get_version(self):
+        """获取当前版本号（类内部方法）"""
+        default_version = "V1.0.1"
+        # 打包环境处理
+        if getattr(sys, 'frozen', False):
+            try:
+                base_path = sys._MEIPASS
+                version_path = os.path.join(base_path, 'version.txt')
+                with open(version_path, 'r', encoding='utf-8') as f:
+                    return f.read().strip()
+            except Exception:
+                return default_version
+        # 开发环境处理
+        else:
+            try:
+                # 获取当前文件路径
+                script_path = os.path.abspath(__file__)
+                git_root = self._get_git_root(os.path.dirname(script_path))
+
+                if not git_root:
+                    return f"{default_version}-dev"
+
+                # 执行Git命令
+                result = subprocess.run(
+                    ["git", "describe", "--tags", "--dirty", "--always"],
+                    cwd=git_root,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    check=True,
+                )
+                version = result.stdout.strip()
+                return version if version else f"{default_version}-dev"
+            except subprocess.CalledProcessError as e:
+                print(f"Git版本获取失败: {e.stderr}")
+                return f"{default_version}-dev"
+            except Exception as e:
+                print(f"版本获取异常: {e}")
+                return f"{default_version}-dev"
 
     def tr(self, key):
         """翻译文字"""
@@ -333,18 +387,23 @@ class SettingsDialog(QDialog):
         language_layout.addWidget(self.language_combobox)
         layout.addLayout(language_layout)
 
-        # 项目地址
-        self.website_label = QLabel()
+        # 垂直拉伸
+        layout.addStretch()
+
+        # 项目地址和版本号的布局
+        bottom_layout = QHBoxLayout()
+
+        # 项目地址标签
+        self.website_label = QLabel(self)
         self.website_label.setTextInteractionFlags(Qt.TextBrowserInteraction)
         self.website_label.setOpenExternalLinks(True)
+        bottom_layout.addWidget(self.website_label, alignment=Qt.AlignLeft)
 
-        # 创建底部布局
-        bottom_layout = QHBoxLayout()
-        bottom_layout.addWidget(self.website_label, alignment=Qt.AlignLeft)  # 左对齐
-        bottom_layout.addStretch()  # 右侧填充
+        # 版本号标签
+        self.version_label = QLabel(self.version)
+        self.version_label.setStyleSheet("color: #000000; font-size: 10px;")
+        bottom_layout.addWidget(self.version_label, alignment=Qt.AlignRight)
 
-        # 将其他内容推到顶部，链接放到底部
-        layout.addStretch()  # 添加拉伸因子
         layout.addLayout(bottom_layout)  # 添加底部布局
 
         self.retranslate_ui()  # 初始化界面文本翻译
