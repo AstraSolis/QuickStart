@@ -455,7 +455,7 @@ class QuickLaunchApp(QMainWindow):
 
         self.language_manager = LanguageManager()  # 使用新的语言管理类
         self.language = self.config.get("language", "中文")  # 获取当前语言配置
-        self.setWindowTitle(self.language_manager.get_translation(self.language, "title"))
+
 
         self.icon_provider = QFileIconProvider()  # 初始化文件图标提供器
         self.setWindowIcon(QIcon(window_path))  # 窗口图标
@@ -786,11 +786,6 @@ class QuickLaunchApp(QMainWindow):
                 formatted_text = f"{display_name:<50} {admin_text:<10} {params_text}"
                 item.setText(formatted_text.strip())  # 设置列表项的显示文本
 
-                # 设置文件项的字体为固定宽度字体，以保持对齐
-                font = QFont("Monospace")
-                font.setStyleHint(QFont.Monospace)
-                font.setPointSize(10)
-                item.setFont(font)
 
                 # 将生成的文件项添加到列表中
                 self.file_list_widget.addItem(item)

@@ -4,8 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="15a7cc59-78e5-4ca0-9672-c9bdc1b03113" name="更改" comment="拆分设置菜单">
-      <change afterPath="$PROJECT_DIR$/build.py" afterDir="false" />
+    <list default="true" id="15a7cc59-78e5-4ca0-9672-c9bdc1b03113" name="更改" comment="增加版本号">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/QuickStart.py" beforeDir="false" afterPath="$PROJECT_DIR$/QuickStart.py" afterDir="false" />
     </list>
@@ -41,23 +40,23 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Python.QuickStart.executor": "Run",
-    "Python.__init__.executor": "Run",
-    "Python.build.executor": "Run",
-    "Python.python -m pip show PyQt5 python -m pip show PyQt5-sip.executor": "Run",
-    "Python.python -m pip show PyQt5-sip.executor": "Run",
-    "Python.python -m pip show PyQt5.executor": "Run",
-    "Python.python QuickStart.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "master",
-    "last_opened_file_path": "E:/PythonProject/QuickStart",
-    "run.code.analysis.last.selected.profile": "aDefault",
-    "settings.editor.selected.configurable": "preferences.pluginManager"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Python.QuickStart.executor&quot;: &quot;Run&quot;,
+    &quot;Python.__init__.executor&quot;: &quot;Run&quot;,
+    &quot;Python.build.executor&quot;: &quot;Run&quot;,
+    &quot;Python.python -m pip show PyQt5 python -m pip show PyQt5-sip.executor&quot;: &quot;Run&quot;,
+    &quot;Python.python -m pip show PyQt5-sip.executor&quot;: &quot;Run&quot;,
+    &quot;Python.python -m pip show PyQt5.executor&quot;: &quot;Run&quot;,
+    &quot;Python.python QuickStart.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
+    &quot;last_opened_file_path&quot;: &quot;E:/PythonProject/QuickStart&quot;,
+    &quot;run.code.analysis.last.selected.profile&quot;: &quot;aDefault&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;
   }
-}]]></component>
+}</component>
   <component name="PyConsoleOptionsProvider">
     <option name="myPythonConsoleState">
       <console-settings module-name="QuickStart" is-module-sdk="true">
@@ -71,8 +70,9 @@
       <recent name="E:\PythonProject\QuickStart" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
-      <recent name="E:\PythonProject\QuickStart\Icon" />
+      <recent name="E:\PythonProject\QuickStart\fonts" />
       <recent name="E:\PythonProject\QuickStart" />
+      <recent name="E:\PythonProject\QuickStart\Icon" />
     </key>
   </component>
   <component name="RunAnythingCache">
@@ -148,14 +148,6 @@
       <command value="pyinstaller QuickStart.spec " />
       <command value="git describe --tags --dirty --always &gt; version.txt" />
     </option>
-  </component>
-  <component name="RunManager">
-    <recent_temporary>
-      <list>
-        <item itemvalue="Python.python -m pip show PyQt5-sip" />
-        <item itemvalue="Python.python -m pip show PyQt5-sip" />
-      </list>
-    </recent_temporary>
   </component>
   <component name="SharedIndexes">
     <attachedChunks>
@@ -376,7 +368,15 @@
       <option name="project" value="LOCAL" />
       <updated>1738065364671</updated>
     </task>
-    <option name="localTasksCounter" value="26" />
+    <task id="LOCAL-00026" summary="增加版本号">
+      <option name="closed" value="true" />
+      <created>1738142561961</created>
+      <option name="number" value="00026" />
+      <option name="presentableId" value="LOCAL-00026" />
+      <option name="project" value="LOCAL" />
+      <updated>1738142561961</updated>
+    </task>
+    <option name="localTasksCounter" value="27" />
     <servers />
   </component>
   <component name="UnknownFeatures">
@@ -430,6 +430,7 @@
     <MESSAGE value="多语言支持" />
     <MESSAGE value="优化多语言" />
     <MESSAGE value="拆分设置菜单" />
-    <option name="LAST_COMMIT_MESSAGE" value="拆分设置菜单" />
+    <MESSAGE value="增加版本号" />
+    <option name="LAST_COMMIT_MESSAGE" value="增加版本号" />
   </component>
 </project>
