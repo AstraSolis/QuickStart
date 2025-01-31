@@ -9,7 +9,7 @@ import subprocess
 from win32com.client import Dispatch
 from win32com.shell import shell, shellcon
 from PyQt5.QtCore import QFileInfo, Qt, pyqtSignal
-from PyQt5.QtGui import QIcon, QFont, QKeyEvent
+from PyQt5.QtGui import QIcon, QKeyEvent
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QListWidget, QVBoxLayout, QPushButton, QHBoxLayout,
     QWidget, QListWidgetItem, QAbstractItemView, QMenu, QMessageBox, QInputDialog,
@@ -456,7 +456,6 @@ class QuickLaunchApp(QMainWindow):
         self.language_manager = LanguageManager()  # 使用新的语言管理类
         self.language = self.config.get("language", "中文")  # 获取当前语言配置
 
-
         self.icon_provider = QFileIconProvider()  # 初始化文件图标提供器
         self.setWindowIcon(QIcon(window_path))  # 窗口图标
 
@@ -769,28 +768,47 @@ class QuickLaunchApp(QMainWindow):
                 # 如果有备注，用括号包裹显示；否则仅显示文件名
                 display_name = f"{remark} ({file_name})" if remark else file_name
 
-                # 根据文件配置，生成管理员标记文本
-                admin_text = f"[{self.tr('administrator')}]" if file_info.get("admin", False) else ""
-                # 获取启动参数并生成相应的文本
-                params = file_info.get("params", "")
-                params_text = f"[{self.tr('add_params')}: {params}]" if params else ""
-
-                # 获取文件对应的图标
-                icon = self.get_icon(file_path)
-                # 创建一个 QListWidgetItem 对象，用于在列表中显示文件信息
+                # 创建列表项和自定义控件
                 item = QListWidgetItem()
-                item.setToolTip(file_path)  # 设置工具提示为文件完整路径
-                item.setIcon(icon)  # 设置文件图标
+                item.setToolTip(file_path)
+                item.setIcon(self.get_icon(file_path))
 
-                # 格式化文件显示的完整文本（包括备注、管理员标记和启动参数）
-                formatted_text = f"{display_name:<50} {admin_text:<10} {params_text}"
-                item.setText(formatted_text.strip())  # 设置列表项的显示文本
+                widget = QWidget()
+                layout = QHBoxLayout(widget)
+                layout.setContentsMargins(5, 2, 5, 2)
+                layout.setSpacing(10)
 
+                # 文件名部分（固定宽度左对齐）
+                name_label = QLabel(display_name)
+                name_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+                name_label.setFixedWidth(200)  # 固定宽度防止拉伸
 
-                # 将生成的文件项添加到列表中
+                # 右侧标签容器（右对齐）
+                right_container = QWidget()
+                right_layout = QHBoxLayout(right_container)
+                right_layout.setContentsMargins(0, 0, 0, 0)
+                right_layout.setAlignment(Qt.AlignRight)
+
+                # 管理员标签
+                if file_info.get("admin", False):
+                    admin_label = QLabel(f"[{self.tr('administrator')}]")
+                    admin_label.setStyleSheet("color: red; margin-right: 10px;")
+                    right_layout.addWidget(admin_label)
+
+                # 参数标签
+                if params := file_info.get("params", ""):
+                    params_label = QLabel(f"[{self.tr('add_params')}: {params}]")
+                    params_label.setStyleSheet("color: #666666;")
+                    right_layout.addWidget(params_label)
+
+                # 组装布局
+                layout.addWidget(name_label)
+                layout.addWidget(right_container, 1)  # 给右侧容器分配剩余空间
+
                 self.file_list_widget.addItem(item)
+                self.file_list_widget.setItemWidget(item, widget)
+
             except Exception as e:
-                # 如果在更新文件列表时发生异常，打印错误日志
                 print(f"更新文件列表时出错：{e}")
 
     def show_context_menu(self, pos):
