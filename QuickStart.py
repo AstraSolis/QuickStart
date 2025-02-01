@@ -140,6 +140,7 @@ class FileFolderDialog(QDialog):
             self.setWindowIcon(QIcon(folder_path))  # 选择文件菜单图标
             self.setWindowTitle(self.tr("select_file_or_folder"))  # 设置窗口标题
             self.setMinimumWidth(300)
+            self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)  # 隐藏窗口问号
         except Exception as e:
             print(f"Error during FileFolderDialog initialization: {e}")
 
@@ -303,6 +304,7 @@ class SettingsDialog(QDialog):
         # 初始化窗口属性
         self.setWindowIcon(QIcon(settings_path))
         self.setFixedSize(250, 150)
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)  # 隐藏窗口问号
 
         self.init_ui()  # 初始化界面组件
         self.setup_connections()  # 建立信号槽连接
