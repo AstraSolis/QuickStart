@@ -8,7 +8,7 @@ import subprocess
 # 第三方库导入
 from win32com.client import Dispatch
 from win32com.shell import shell, shellcon
-from PyQt5.QtCore import QFileInfo, Qt, pyqtSignal
+from PyQt5.QtCore import QFileInfo, Qt, pyqtSignal, QDataStream
 from PyQt5.QtGui import QIcon, QKeyEvent
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QListWidget, QVBoxLayout, QPushButton, QHBoxLayout,
@@ -16,7 +16,6 @@ from PyQt5.QtWidgets import (
     QFileDialog, QDialog, QLabel, QCheckBox, QComboBox, QFileIconProvider, QLineEdit,
 )
 from PyQt5.QtNetwork import QLocalServer, QLocalSocket
-from PyQt5.QtCore import QByteArray, QDataStream, QIODevice
 
 # 检查程序是否在打包后环境中运行
 if getattr(sys, 'frozen', False):  # 如果是打包后的可执行文件
