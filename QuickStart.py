@@ -15,6 +15,8 @@ from PyQt5.QtWidgets import (
     QWidget, QListWidgetItem, QAbstractItemView, QMenu, QMessageBox, QInputDialog,
     QFileDialog, QDialog, QLabel, QCheckBox, QComboBox, QFileIconProvider, QLineEdit,
 )
+from PyQt5.QtNetwork import QLocalServer, QLocalSocket
+from PyQt5.QtCore import QByteArray, QDataStream, QIODevice
 
 # 检查程序是否在打包后环境中运行
 if getattr(sys, 'frozen', False):  # 如果是打包后的可执行文件
@@ -310,7 +312,7 @@ class SettingsDialog(QDialog):
         self.setup_connections()  # 建立信号槽连接
 
     def _get_git_root(self, path):
-        """查找给定路径的Git根目录（类内部方法）"""
+        """查找给定路径的Git根目录"""
         path = os.path.abspath(path)
         while True:
             if os.path.isdir(os.path.join(path, '.git')):
@@ -321,7 +323,7 @@ class SettingsDialog(QDialog):
             path = parent
 
     def _get_version(self):
-        """获取当前版本号（类内部方法）"""
+        """获取当前版本号"""
         default_version = "V1.0.1"
         # 打包环境处理
         if getattr(sys, 'frozen', False):
@@ -560,6 +562,11 @@ class QuickLaunchApp(QMainWindow):
                 outline: none;                  /* 移除按钮获得焦点时的轮廓线 */
             }
         """)
+
+    def bring_to_front(self):
+        self.showNormal()  # 恢复窗口（如果最小化）
+        self.raise_()  # 前置窗口
+        self.activateWindow()  # 激活窗口
 
     def add_params(self, items):
         """添加启动参数"""
@@ -1040,9 +1047,53 @@ class QuickLaunchApp(QMainWindow):
         self.update_file_list()
 
 
-if __name__ == "__main__":
-
+def main():
     app = QApplication(sys.argv)
+
+    # 设置唯一的服务器名称（必须是全局唯一的）
+    server_name = "QuickLaunchApp_UniqueServerName_v1"
+
+    # 尝试创建本地服务器
+    local_server = QLocalServer()
+    socket = QLocalSocket()
+
+    # 尝试连接已有实例
+    socket.connectToServer(server_name)
+    if socket.waitForConnected(500):
+        # 如果连接成功，发送激活信号
+        stream = QDataStream(socket)
+        stream.writeQString("activate")
+        socket.waitForBytesWritten()
+        socket.close()
+        return 0  # 退出新实例
+
+    # 创建主窗口前启动服务器
+    local_server.listen(server_name)
+
+    # 创建主窗口
     window = QuickLaunchApp()
     window.show()
+
+    # 处理激活请求
+    def handle_connection():
+        while local_server.hasPendingConnections():
+            conn = local_server.nextPendingConnection()
+            conn.readyRead.connect(lambda: handle_activate(conn))
+
+    def handle_activate(conn):
+        stream = QDataStream(conn)
+        if conn.bytesAvailable() > 0:
+            msg = stream.readQString()
+            if msg == "activate":
+                window.showNormal()  # 恢复窗口（如果最小化）
+                window.raise_()  # 前置窗口
+                window.activateWindow()  # 激活窗口
+        conn.disconnectFromServer()
+
+    local_server.newConnection.connect(handle_connection)
+
     sys.exit(app.exec_())
+
+
+if __name__ == "__main__":
+    main()
