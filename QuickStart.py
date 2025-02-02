@@ -1,4 +1,3 @@
-
 # 标准库导入
 import os
 import sys
@@ -594,10 +593,23 @@ class QuickLaunchApp(QMainWindow):
         """)
 
     def show_normal(self):
-        """将窗口恢复正常显示状态并置顶"""
-        self.showNormal()  # 将最小化/最大化的窗口恢复为普通状态
-        self.raise_()  # 将窗口提升到父控件堆叠的顶部
-        self.activateWindow()  # 激活窗口使其获得焦点
+        """统一窗口激活逻辑"""
+        if self.isMinimized():
+            # 如果窗口被最小化，先恢复正常状态
+            self.showNormal()
+
+        # 确保窗口前置并激活
+        self.setWindowState(self.windowState() & ~Qt.WindowMinimized)  # 清除最小化状态
+
+        self.raise_()                         # 提升到父控件栈顶
+        self.activateWindow()                 # 激活窗口获取焦点
+        self.setWindowState(Qt.WindowActive)  # 强制设为活动状态
+
+        # 如果窗口被其他窗口遮挡，闪烁任务栏按钮（仅Windows）
+        if sys.platform == "win32":
+            from ctypes import windll
+            hwnd = self.winId().__int__()
+            windll.user32.FlashWindow(hwnd, True)
 
     def quit_app(self):
         """安全退出应用程序"""
@@ -1141,12 +1153,16 @@ def main():
         if conn.bytesAvailable() > 0:
             msg = stream.readQString()
             if msg == "activate":
-                window.show_normal()  # 直接使用现有的show_normal方法
+                window.show_normal()  # 统一使用优化后的激活方法
+                if sys.platform == "win32":
+                    window.setWindowState(window.windowState() | Qt.WindowActive)
+                    window.show()
         conn.disconnectFromServer()
 
     local_server.newConnection.connect(handle_connection)
 
     sys.exit(app.exec_())
+
 
 if __name__ == "__main__":
     main()
