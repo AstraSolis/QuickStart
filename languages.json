@@ -30,7 +30,11 @@
                 "cancel": "取消",
                 "file_types": "文件类型",
                 "all_files": "所有文件 (*.*)",
-                "project_address": "项目地址"
+                "project_address": "项目地址",
+                "minimize_to_tray": "最小化到系统托盘",
+                "show": "显示主窗口",
+                "exit": "退出",
+                "app_running_in_tray": "程序正在后台运行"
             },
             "English": {
                 "title": "Quick Launch",
@@ -63,6 +67,10 @@
                 "cancel": "Cancel",
                 "file_types": "File Types",
                 "all_files": "All Files (*.*)",
-                "project_address": "Project address"
+                "project_address": "Project address",
+                "minimize_to_tray": "Minimize to Tray",
+                 "show": "Show Window",
+                 "exit": "Exit",
+                 "app_running_in_tray": "Application is running in the background"
             }
         }

@@ -14,6 +14,7 @@ from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QListWidget, QVBoxLayout, QPushButton, QHBoxLayout,
     QWidget, QListWidgetItem, QAbstractItemView, QMenu, QMessageBox, QInputDialog,
     QFileDialog, QDialog, QLabel, QCheckBox, QComboBox, QFileIconProvider, QLineEdit,
+    QSystemTrayIcon
 )
 from PyQt5.QtNetwork import QLocalServer, QLocalSocket
 
@@ -83,8 +84,11 @@ class ConfigManager:
         else:
             # 配置文件不存在时使用默认配置
             self.config = {
-                "language": "中文", "show_extensions": True,
-                "remove_arrow": False, "files": []
+                "language": "中文",
+                "show_extensions": True,
+                "remove_arrow": False,
+                "minimize_to_tray": False,
+                "files": []
             }
             self.save_config()  # 保存默认配置
 
@@ -291,6 +295,7 @@ class SettingsDialog(QDialog):
     language_changed = pyqtSignal(str)          # 语言变更信号
     show_extensions_changed = pyqtSignal(bool)  # 显示扩展名设置变更信号
     remove_arrow_changed = pyqtSignal(bool)     # 快捷方式箭头设置变更信号
+    minimize_to_tray_changed = pyqtSignal(bool)  # 系统托盘
 
     def __init__(self, config_manager, language_manager, current_language, parent=None):
 
@@ -380,6 +385,11 @@ class SettingsDialog(QDialog):
         self.remove_arrow_checkbox.setChecked(self.config_manager.get("remove_arrow", False))
         layout.addWidget(self.remove_arrow_checkbox)
 
+        # 最小化到托盘复选框
+        self.minimize_to_tray_checkbox = QCheckBox(self.tr("minimize_to_tray"), self)
+        self.minimize_to_tray_checkbox.setChecked(self.config_manager.get("minimize_to_tray", False))
+        layout.addWidget(self.minimize_to_tray_checkbox)
+
         # 语言选择
         language_layout = QHBoxLayout()
         self.language_label = QLabel(self.tr("language"), self)
@@ -416,6 +426,7 @@ class SettingsDialog(QDialog):
         self.show_extensions_checkbox.stateChanged.connect(self.on_show_extensions_changed)  # 显示扩展名复选框状态变化时更新配置
         self.remove_arrow_checkbox.stateChanged.connect(self.on_remove_arrow_changed)  # 去除箭头复选框状态变化时更新配置
         self.language_combobox.currentTextChanged.connect(self.on_language_changed)  # 语言选择变化时更新配置和界面
+        self.minimize_to_tray_checkbox.stateChanged.connect(self.on_minimize_to_tray_changed)  # 系统托盘
 
     def retranslate_ui(self):
         """动态更新界面文本"""
@@ -425,6 +436,7 @@ class SettingsDialog(QDialog):
         self.language_label.setText(self.tr("language"))
         link_text = self.tr("project_address")
         self.website_label.setText(f'<a href="https://github.com/AstraSolis">{link_text}</a>')
+        self.minimize_to_tray_checkbox.setText(self.tr("minimize_to_tray"))
 
     def on_show_extensions_changed(self, state):
         """处理显示扩展名设置变更"""
@@ -437,6 +449,12 @@ class SettingsDialog(QDialog):
         new_state = state == Qt.Checked
         self.config_manager.set("remove_arrow", new_state)
         self.remove_arrow_changed.emit(new_state)  # 发射信号
+
+    def on_minimize_to_tray_changed(self, state):
+        """系统托盘"""
+        new_state = state == Qt.Checked
+        self.config_manager.set("minimize_to_tray", new_state)
+        self.minimize_to_tray_changed.emit(new_state)
 
     def on_language_changed(self, language):
         """处理语言选择变更"""
@@ -461,6 +479,19 @@ class QuickLaunchApp(QMainWindow):
 
         self.icon_provider = QFileIconProvider()  # 初始化文件图标提供器
         self.setWindowIcon(QIcon(window_path))  # 窗口图标
+
+        # 创建系统托盘图标
+        self.tray_icon = QSystemTrayIcon(self)
+        self.tray_icon.setIcon(QIcon(icon_path))
+
+        # 创建托盘菜单
+        tray_menu = QMenu()
+        show_action = tray_menu.addAction(self.tr("show"))
+        exit_action = tray_menu.addAction(self.tr("exit"))
+        show_action.triggered.connect(self.show_normal)
+        exit_action.triggered.connect(self.quit_app)
+        self.tray_icon.setContextMenu(tray_menu)
+        self.tray_icon.activated.connect(self.on_tray_activated)
 
         self.file_folder_dialog = None  # 用于保存 FileFolderDialog 实例
         self.init_ui()  # 初始化界面
@@ -562,10 +593,36 @@ class QuickLaunchApp(QMainWindow):
             }
         """)
 
-    def bring_to_front(self):
-        self.showNormal()  # 恢复窗口（如果最小化）
-        self.raise_()  # 前置窗口
-        self.activateWindow()  # 激活窗口
+    def show_normal(self):
+        """将窗口恢复正常显示状态并置顶"""
+        self.showNormal()  # 将最小化/最大化的窗口恢复为普通状态
+        self.raise_()  # 将窗口提升到父控件堆叠的顶部
+        self.activateWindow()  # 激活窗口使其获得焦点
+
+    def quit_app(self):
+        """安全退出应用程序"""
+        self.tray_icon.hide()  # 隐藏系统托盘图标（避免残留）
+        QApplication.quit()  # 终止Qt应用程序事件循环
+
+    def on_tray_activated(self, reason):
+        """处理系统托盘图标触发事件"""
+        if reason == QSystemTrayIcon.DoubleClick:
+            self.show_normal()
+
+    def closeEvent(self, event):
+        """窗口关闭事件处"""
+        if self.config.get("minimize_to_tray", False):
+            event.ignore()
+            self.hide()
+            self.tray_icon.showMessage(
+                self.tr("title"),
+                self.tr("app_running_in_tray"),
+                QSystemTrayIcon.Information,
+                2000
+            )
+            self.tray_icon.show()
+        else:
+            self.quit_app()
 
     def add_params(self, items):
         """添加启动参数"""
@@ -1084,15 +1141,12 @@ def main():
         if conn.bytesAvailable() > 0:
             msg = stream.readQString()
             if msg == "activate":
-                window.showNormal()  # 恢复窗口（如果最小化）
-                window.raise_()  # 前置窗口
-                window.activateWindow()  # 激活窗口
+                window.show_normal()  # 直接使用现有的show_normal方法
         conn.disconnectFromServer()
 
     local_server.newConnection.connect(handle_connection)
 
     sys.exit(app.exec_())
-
 
 if __name__ == "__main__":
     main()
