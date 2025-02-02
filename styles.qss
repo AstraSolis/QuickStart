@@ -1,0 +1,57 @@
+/* 主窗口样式 */
+QMainWindow {
+    background-color: #F4F4F4;
+}
+
+/* 列表控件基础样式 */
+QListWidget {
+    background: #FFFFFF;
+    font-size: 14px;
+    padding: 5px;
+    border-radius: 5px;
+}
+
+/* 列表项基础样式 */
+QListWidget::item {
+    padding: 10px;
+}
+
+/* 鼠标悬停效果 */
+QListWidget::item:hover {
+    background: #E6F7FF;
+}
+
+/* 选中项样式 */
+QListWidget::item:selected {
+    background: #0078D7;
+    color: white;
+}
+
+/* 移除列表控件的焦点虚线框 */
+QListWidget:focus {
+    border: none;
+    outline: none;
+}
+
+/* 按钮基础样式 */
+QPushButton {
+    background-color: #0078D7;
+    color: white;
+    border-radius: 5px;
+    padding: 5px 15px;
+}
+
+QPushButton:hover {
+    background-color: #005A9E;
+}
+
+/* 移除所有按钮的焦点虚线框 */
+QPushButton:focus {
+    outline: none;
+}
+
+/* 版本号标签样式 */
+QLabel#version_label {
+    color: #000000;
+    font-size: 10px;
+}

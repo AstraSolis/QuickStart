@@ -413,8 +413,8 @@ class SettingsDialog(QDialog):
 
         # 版本号标签
         self.version_label = QLabel(self.version)
-        self.version_label.setStyleSheet("color: #000000; font-size: 10px;")
         bottom_layout.addWidget(self.version_label, alignment=Qt.AlignRight)
+        self.version_label.setObjectName("version_label")
 
         layout.addLayout(bottom_layout)  # 添加底部布局
 
@@ -523,14 +523,6 @@ class QuickLaunchApp(QMainWindow):
         self.settings_button = QPushButton(self.tr("settings"), self)
         self.settings_button.clicked.connect(self.show_settings)
 
-        # 美化按钮
-        self.add_file_button.setStyleSheet(
-            "QPushButton { background-color: #0078D7; color: white; border-radius: 5px; padding: 5px 15px; }"
-            "QPushButton:hover { background-color: #005A9E; }")
-        self.settings_button.setStyleSheet(
-            "QPushButton { background-color: #0078D7; color: white; border-radius: 5px; padding: 5px 15px; }"
-            "QPushButton:hover { background-color: #005A9E; }")
-
         # 布局
         layout = QVBoxLayout()
         layout.addWidget(self.file_list_widget)
@@ -538,8 +530,10 @@ class QuickLaunchApp(QMainWindow):
         # 顶部按钮布局
         top_button_layout = QHBoxLayout()
         top_button_layout.addWidget(self.add_file_button, alignment=Qt.AlignLeft)
+        self.add_file_button.setObjectName("add_file_button")
         top_button_layout.addStretch()
         top_button_layout.addWidget(self.settings_button, alignment=Qt.AlignRight)
+        self.settings_button.setObjectName("settings_button")
 
         main_layout = QVBoxLayout()
         main_layout.addLayout(top_button_layout)
@@ -548,49 +542,6 @@ class QuickLaunchApp(QMainWindow):
         container = QWidget()
         container.setLayout(main_layout)
         self.setCentralWidget(container)
-
-        # 全局界面美化
-        self.setStyleSheet("""
-            /* 设置主窗口的样式 */
-            QMainWindow {
-                background-color: #F4F4F4;  /* 主窗口背景颜色 - 浅灰色 */
-            }
-
-            /* 列表控件基础样式 */
-            QListWidget {
-                background: #FFFFFF;            /* 背景颜色：纯白 */
-                font-size: 14px;                /* 字体大小 */
-                padding: 5px;                   /* 内边距：5像素 */
-                border-radius: 5px;             /* 圆角半径：5像素 */
-            }
-
-            /* 列表项基础样式 */
-            QListWidget::item {
-                padding: 10px;                  /* 每个列表项的内边距（增大间距） */
-            }
-
-            /* 鼠标悬停效果 */
-            QListWidget::item:hover {
-                background: #E6F7FF;            /* 悬停时的背景色（淡蓝色） */
-            }
-
-            /* 选中项样式 */
-            QListWidget::item:selected {
-                background: #0078D7;            /* 选中项背景色（微软主题蓝色） */
-                color: white;                   /* 选中项文字颜色 */
-            }
-
-            /* 移除列表控件的焦点虚线框 */
-            QListWidget:focus {
-                border: none;                   /* 移除焦点时的边框变化 */
-                outline: none;                  /* 移除默认的焦点轮廓线 */
-            }
-
-            /* 移除所有按钮的焦点虚线框 */
-            QPushButton:focus {
-                outline: none;                  /* 移除按钮获得焦点时的轮廓线 */
-            }
-        """)
 
     def show_normal(self):
         """统一窗口激活逻辑"""
@@ -1117,6 +1068,18 @@ class QuickLaunchApp(QMainWindow):
 
 def main():
     app = QApplication(sys.argv)
+
+    # 加载QSS样式表
+    if getattr(sys, 'frozen', False):
+        qss_path = os.path.join(sys._MEIPASS, 'styles.qss')
+    else:
+        qss_path = 'styles.qss'
+
+    try:
+        with open(qss_path, 'r', encoding='utf-8') as f:
+            app.setStyleSheet(f.read())
+    except Exception as e:
+        print(f"无法加载样式表: {e}")
 
     # 设置唯一的服务器名称（必须是全局唯一的）
     server_name = "QuickLaunchApp_UniqueServerName_v1"
