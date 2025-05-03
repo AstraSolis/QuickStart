@@ -135,7 +135,7 @@ Issues and Pull Requests are welcome!
 
 ## 📝 License
 
-This project is licensed under the MIT License - see the [LICENSE](https://github.com/AstraSolis/QuickStart/blob/master/LICENSE) file for details
+This project is licensed under the GPL-3.0 License - see the [LICENSE](https://github.com/AstraSolis/QuickStart/blob/master/LICENSE) file for details
 
 ---
 

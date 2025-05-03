@@ -4,6 +4,9 @@ PyQt5>=5.15.0
 # Windows API
 pywin32>=228
 
+# Image Processing
+Pillow>=11.1.0
+
 # Optional: For development
 pytest>=7.0.0  # For testing
 black>=22.0.0  # For code formatting
