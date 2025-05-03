@@ -73,7 +73,7 @@ The application's file information is saved in the `config.json` file with the f
 - `tray_items`: List of files
   - `name`: Display name
   - `path`: File path
-  - `is_dir`: Is directory
+  - `is_dir`: Is folder
   - `remark`: Remark information
   - `admin`: Run as administrator
   - `params`: Launch parameters
@@ -116,7 +116,7 @@ pip install -r requirements.txt
 #### Running from Source
 
 ```bash
-python main.py
+python QuickStart.py
 ```
 
 ---

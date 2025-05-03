@@ -72,7 +72,7 @@
 - `tray_items`: 文件列表
   - `name`: 显示名称
   - `path`: 文件路径
-  - `is_dir`: 是否为目录
+  - `is_dir`: 是否为文件夹
   - `remark`: 备注信息
   - `admin`: 是否以管理员权限运行
   - `params`: 启动参数
@@ -115,7 +115,7 @@ pip install -r requirements.txt
 #### 运行源码
 
 ```bash
-python main.py
+python QuickStart.py
 ```
 
 ---
