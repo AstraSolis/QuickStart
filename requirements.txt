@@ -1,0 +1,10 @@
+# GUI Framework
+PyQt5>=5.15.0
+
+# Windows API
+pywin32>=228
+
+# Optional: For development
+pytest>=7.0.0  # For testing
+black>=22.0.0  # For code formatting
+flake8>=4.0.0  # For code linting 
