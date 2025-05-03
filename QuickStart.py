@@ -22,7 +22,7 @@ from PyQt5.QtNetwork import QLocalServer, QLocalSocket
 from typing import List, Dict, Optional
 
 
-ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('myappid') # 设置应用程序的 AppUserModelID
+ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('github.com/AstraSolis/QuickStart') # 设置应用程序的 AppUserModelID
 
 # 检查程序是否在打包后环境中运行
 if getattr(sys, 'frozen', False):  # 如果是打包后的可执行文件
@@ -529,6 +529,40 @@ class QuickLaunchApp(QMainWindow):
         self.file_folder_dialog = None  # 用于保存 FileFolderDialog 实例
         self.init_ui()  # 初始化界面
         self.retranslate_ui()  # 根据加载的语言配置更新界面文本
+
+        # 设置任务栏图标
+        if sys.platform == "win32":
+            try:
+                import win32gui
+                import win32con
+                import win32api
+                from PIL import Image
+                import io
+                
+                # 使用PIL加载图标
+                img = Image.open(icon_path)
+                img_byte_arr = io.BytesIO()
+                img.save(img_byte_arr, format='ICO')
+                img_byte_arr = img_byte_arr.getvalue()
+                
+                # 创建临时文件
+                temp_ico = os.path.join(os.environ['TEMP'], 'temp_icon.ico')
+                with open(temp_ico, 'wb') as f:
+                    f.write(img_byte_arr)
+                
+                # 加载图标
+                hwnd = self.winId().__int__()
+                icon = win32gui.LoadImage(0, temp_ico, win32con.IMAGE_ICON, 0, 0, win32con.LR_LOADFROMFILE)
+                if icon:
+                    win32gui.SendMessage(hwnd, win32con.WM_SETICON, win32con.ICON_BIG, icon)
+                
+                # 清理临时文件
+                try:
+                    os.remove(temp_ico)
+                except:
+                    pass
+            except Exception as e:
+                print(f"设置任务栏图标时出错: {e}")
 
     def tr(self, key):
         """翻译文字"""
