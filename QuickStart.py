@@ -669,6 +669,9 @@ class QuickLaunchApp(QMainWindow):
         self.file_list_widget.model().rowsMoved.connect(self.update_order_after_drag)
         self.file_list_widget.setSpacing(1)  # 缩小文件项间距
         
+        # 连接大小改变事件
+        self.file_list_widget.resizeEvent = self.on_list_resize
+        
         self.file_list_widget.setStyleSheet("""
             QListWidget, QListWidget::item {
                 color: #222222;
@@ -996,8 +999,17 @@ class QuickLaunchApp(QMainWindow):
                 if any(t.get("path") == file_path for t in self.config.get("tray_items", [])):
                     tags.append(self.tr("tray_tag"))
 
-                # 设置显示文本
-                item.setText(display_name + "  " + " ".join(tags))
+                # 计算需要添加的空格数量（假设每个字符宽度为8像素）
+                list_width = self.file_list_widget.viewport().width()
+                text_width = len(display_name) * 8
+                tags_width = sum(len(tag) * 8 for tag in tags)
+                spaces_needed = max(1, (list_width - text_width - tags_width) // 8)
+                
+                # 设置显示文本，添加足够的空格
+                item.setText(display_name + " " * spaces_needed + " ".join(tags))
+
+                # 设置文本对齐方式
+                item.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
 
                 self.file_list_widget.addItem(item)
             except Exception as e:
@@ -1332,9 +1344,18 @@ class QuickLaunchApp(QMainWindow):
             if any(t.get("path") == file_path for t in self.config.get("tray_items", [])):
                 tags.append(self.tr("tray_tag"))
 
-            # 设置显示文本
-            item.setText(display_name + "  " + " ".join(tags))
+            # 计算需要添加的空格数量（假设每个字符宽度为8像素）
+            list_width = self.file_list_widget.viewport().width()
+            text_width = len(display_name) * 8
+            tags_width = sum(len(tag) * 8 for tag in tags)
+            spaces_needed = max(1, (list_width - text_width - tags_width) // 8)
+            
+            # 设置显示文本，添加足够的空格
+            item.setText(display_name + " " * spaces_needed + " ".join(tags))
             item.setToolTip(file_path)
+            
+            # 设置文本对齐方式
+            item.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
 
         except Exception as e:
             print(f"更新列表项时出错：{e}")
@@ -1555,6 +1576,21 @@ class QuickLaunchApp(QMainWindow):
                 self.tr("error"),
                 self.tr("remove_from_tray_failed")
             )
+
+    def on_list_resize(self, event):
+        """处理列表大小改变事件"""
+        try:
+            # 调用原始的 resizeEvent
+            super(QListWidget, self.file_list_widget).resizeEvent(event)
+            
+            # 更新所有列表项的显示
+            for i in range(self.file_list_widget.count()):
+                item = self.file_list_widget.item(i)
+                row = self.file_list_widget.row(item)
+                file_info = self.config["files"][row]
+                self.update_list_item(item, file_info)
+        except Exception as e:
+            print(f"处理列表大小改变事件时出错：{e}")
 
 
 def main():
