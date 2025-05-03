@@ -4,6 +4,8 @@ import sys
 import json
 import subprocess
 import ctypes
+import re
+import io
 
 # 第三方库导入
 from win32com.client import Dispatch
@@ -21,6 +23,14 @@ from PyQt5.QtNetwork import QLocalServer, QLocalSocket
 # 添加类型提示
 from typing import List, Dict, Optional
 
+# 尝试导入PIL
+try:
+    from PIL import Image
+    PIL_AVAILABLE = True
+except ImportError:
+    PIL_AVAILABLE = False
+    print("警告: PIL模块未安装，任务栏图标可能无法正常显示。请运行 'pip install Pillow' 安装。")
+
 
 ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('github.com/AstraSolis/QuickStart') # 设置应用程序的 AppUserModelID
 
@@ -35,6 +45,36 @@ icon_path = os.path.join(image_folder, 'icon.ico')
 folder_path = os.path.join(image_folder, 'folder.png')
 window_path = os.path.join(image_folder, 'window.png')
 settings_path = os.path.join(image_folder, 'settings.png')
+
+
+class VersionManager:
+    """简单的版本号管理类"""
+    
+    def __init__(self):
+        self.version = "1.0.0"  # 默认版本号
+        self._load_version()
+    
+    def _load_version(self):
+        """加载版本号"""
+        try:
+            # 如果是打包后的环境
+            if getattr(sys, 'frozen', False):
+                version_path = os.path.join(sys._MEIPASS, 'version.txt')
+            else:
+                version_path = 'version.txt'
+            
+            # 如果版本文件存在，读取版本号
+            if os.path.exists(version_path):
+                with open(version_path, 'r', encoding='utf-8') as f:
+                    version = f.read().strip()
+                    if version:
+                        self.version = version
+        except Exception as e:
+            print(f"加载版本号失败: {e}")
+    
+    def get_version(self):
+        """获取版本号"""
+        return self.version
 
 
 class LanguageManager:
@@ -309,7 +349,7 @@ class SettingsDialog(QDialog):
     def __init__(self, config_manager, language_manager, current_language, tray_icon, parent=None):
         super().__init__(parent)
         
-        self.version = self._get_version()  # 添加版本号属性
+        self.version_manager = VersionManager()  # 使用版本管理器
         self.config_manager = config_manager       # 存储配置管理对象
         self.language_manager = language_manager  # 存储语言管理对象
         self.language = current_language           # 存储当前语言
@@ -421,7 +461,10 @@ class SettingsDialog(QDialog):
         bottom_layout.addWidget(self.website_label, alignment=Qt.AlignLeft)
 
         # 版本号标签
-        self.version_label = QLabel(self.version)
+        version = self.version_manager.get_version()
+        build_type = "Release" if getattr(sys, 'frozen', False) else "Dev"
+        version_text = f"v{version} ({build_type})"
+        self.version_label = QLabel(version_text)
         bottom_layout.addWidget(self.version_label, alignment=Qt.AlignRight)
         self.version_label.setObjectName("version_label")
 
@@ -536,33 +579,40 @@ class QuickLaunchApp(QMainWindow):
                 import win32gui
                 import win32con
                 import win32api
-                from PIL import Image
-                import io
                 
-                # 使用PIL加载图标
-                img = Image.open(icon_path)
-                img_byte_arr = io.BytesIO()
-                img.save(img_byte_arr, format='ICO')
-                img_byte_arr = img_byte_arr.getvalue()
-                
-                # 创建临时文件
-                temp_ico = os.path.join(os.environ['TEMP'], 'temp_icon.ico')
-                with open(temp_ico, 'wb') as f:
-                    f.write(img_byte_arr)
-                
-                # 加载图标
-                hwnd = self.winId().__int__()
-                icon = win32gui.LoadImage(0, temp_ico, win32con.IMAGE_ICON, 0, 0, win32con.LR_LOADFROMFILE)
-                if icon:
-                    win32gui.SendMessage(hwnd, win32con.WM_SETICON, win32con.ICON_BIG, icon)
-                
-                # 清理临时文件
-                try:
-                    os.remove(temp_ico)
-                except:
-                    pass
+                if PIL_AVAILABLE:
+                    # 使用PIL加载图标
+                    img = Image.open(icon_path)
+                    img_byte_arr = io.BytesIO()
+                    img.save(img_byte_arr, format='ICO')
+                    img_byte_arr = img_byte_arr.getvalue()
+                    
+                    # 创建临时文件
+                    temp_ico = os.path.join(os.environ['TEMP'], 'temp_icon.ico')
+                    with open(temp_ico, 'wb') as f:
+                        f.write(img_byte_arr)
+                    
+                    # 加载图标
+                    hwnd = self.winId().__int__()
+                    icon = win32gui.LoadImage(0, temp_ico, win32con.IMAGE_ICON, 0, 0, win32con.LR_LOADFROMFILE)
+                    if icon:
+                        win32gui.SendMessage(hwnd, win32con.WM_SETICON, win32con.ICON_BIG, icon)
+                    
+                    # 清理临时文件
+                    try:
+                        os.remove(temp_ico)
+                    except:
+                        pass
+                else:
+                    # 如果PIL不可用，使用Qt的图标
+                    hwnd = self.winId().__int__()
+                    icon = win32gui.LoadImage(0, icon_path, win32con.IMAGE_ICON, 0, 0, win32con.LR_LOADFROMFILE)
+                    if icon:
+                        win32gui.SendMessage(hwnd, win32con.WM_SETICON, win32con.ICON_BIG, icon)
             except Exception as e:
                 print(f"设置任务栏图标时出错: {e}")
+                # 使用Qt的默认图标处理
+                self.setWindowIcon(QIcon(icon_path))
 
     def tr(self, key):
         """翻译文字"""
