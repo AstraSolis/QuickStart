@@ -104,82 +104,90 @@ class LanguageManager:
 
 
 class ConfigManager:
-
     def __init__(self, config_file="config.json"):
         self.config_file = config_file
-        self.config = {}  # 使用 config 来存储配置
-        self.load_config()  # 加载配置
+        self.config = {}
+        self._config_cache = {}  # 添加配置缓存
+        self.load_config()
 
     def load_config(self):
-
         """加载配置"""
-        if os.path.exists(self.config_file):
-            try:
+        try:
+            if os.path.exists(self.config_file):
                 with open(self.config_file, "r", encoding="utf-8") as f:
-                    self.config = json.load(f)  # 加载配置到 self.config
-
-                    # 确保配置中有 'files' 和 'tray_items' 键，如果没有则初始化为空列表
-                    if 'files' not in self.config:
-                        self.config['files'] = []
-                    if 'tray_items' not in self.config:
-                        self.config.setdefault("tray_items", [])
-
-                    # 检查并删除无效文件路径
+                    self.config = json.load(f)
+                    self._config_cache.clear()  # 清除缓存
+                    
+                    # 确保配置中有必要的键
+                    self.config.setdefault("files", [])
+                    self.config.setdefault("tray_items", [])
+                    self.config.setdefault("language", "中文")
+                    self.config.setdefault("show_extensions", True)
+                    self.config.setdefault("remove_arrow", False)
+                    self.config.setdefault("minimize_to_tray", False)
+                    
                     self.remove_invalid_files()
+            else:
+                self._create_default_config()
+        except Exception as e:
+            print(f"加载配置失败: {e}")
+            self._create_default_config()
 
-            except Exception as e:
-                print(f"加载配置失败: {e}")
-        else:
-            # 配置文件不存在时使用默认配置
-            self.config = {
-                "language": "中文",
-                "show_extensions": True,
-                "remove_arrow": False,
-                "minimize_to_tray": False,
-                "tray_items": [],  # 系统托盘
-                "files": []
-            }
-            self.save_config()  # 保存默认配置
+    def _create_default_config(self):
+        """创建默认配置"""
+        self.config = {
+            "language": "中文",
+            "show_extensions": True,
+            "remove_arrow": False,
+            "minimize_to_tray": False,
+            "tray_items": [],
+            "files": []
+        }
+        self.save_config()
 
     def save_config(self):
         """保存配置"""
         try:
             with open(self.config_file, "w", encoding="utf-8") as f:
-                json.dump(
-                    self.config, f, indent=4, ensure_ascii=False
-                )   # 使用 self.config 来保存配置
+                json.dump(self.config, f, indent=4, ensure_ascii=False)
+            self._config_cache.clear()  # 清除缓存
         except Exception as e:
             print(f"保存配置失败: {e}")
-            QMessageBox.critical(None, "保存失败", f"无法保存配置: {e}")  # 弹窗提示错误
+            QMessageBox.critical(None, "保存失败", f"无法保存配置: {e}")
 
-    def get(self, key, default=None):
-        """获取配置项"""
-        return self.config.get(key, default)
+    def get(self, key: str, default=None):
+        """获取配置项，使用缓存机制"""
+        if key in self._config_cache:
+            return self._config_cache[key]
+        
+        value = self.config.get(key, default)
+        self._config_cache[key] = value
+        return value
 
-    def set(self, key, value):
+    def set(self, key: str, value):
         """设置配置项并保存"""
         self.config[key] = value
-        self.save_config()  # 直接调用 save_config() 方法保存配置
+        self._config_cache[key] = value  # 更新缓存
+        self.save_config()
 
     def remove_invalid_files(self):
         """移除无效的文件路径"""
+        if not self.config.get("files"):
+            return
+            
+        valid_files = []
         invalid_paths = []
 
-        # 遍历配置中的文件，检查路径有效性
-        for file_info in self.config.get("files", []):
+        for file_info in self.config["files"]:
             file_path = file_info.get("path", "")
-            if not os.path.exists(file_path):
+            if os.path.exists(file_path):
+                valid_files.append(file_info)
+            else:
                 invalid_paths.append(file_path)
 
         if invalid_paths:
-            # 删除无效路径的文件项
-            self.config["files"] = [
-                file_info for file_info in self.config["files"]
-                if file_info["path"] not in invalid_paths
-            ]
-            print(f"已删除无效文件: {', '.join(invalid_paths)}")  # 调试输出
-
-            # 保存更新后的配置
+            self.config["files"] = valid_files
+            print(f"已删除无效文件: {', '.join(invalid_paths)}")
             self.save_config()
 
 
@@ -704,7 +712,7 @@ class QuickLaunchApp(QMainWindow):
             tray_menu.addSeparator()
             
             # 添加用户自定义项
-            self.update_tray_menu()
+            self._add_tray_menu_items(tray_menu)
             
             # 添加分隔线
             tray_menu.addSeparator()
@@ -717,25 +725,67 @@ class QuickLaunchApp(QMainWindow):
         except Exception as e:
             print(f"创建托盘菜单时出错: {e}")
 
-    def on_tray_activated(self, reason):
-        """处理托盘图标激活事件"""
+    def _add_tray_menu_items(self, menu: QMenu) -> None:
+        """添加托盘菜单项"""
         try:
-            if reason == QSystemTrayIcon.DoubleClick:
-                self.show_normal()
-            elif reason == QSystemTrayIcon.Trigger:  # 单击
-                if self.isVisible():
-                    self.hide()
-                else:
-                    self.show_normal()
-        except Exception as e:
-            print(f"处理托盘图标激活事件时出错: {e}")
+            tray_items = self.config.get("tray_items", [])
+            if not tray_items:
+                return
 
-    def on_tray_message_clicked(self):
-        """处理托盘消息点击事件"""
-        try:
-            self.show_normal()
+            for item in tray_items:
+                try:
+                    path = item.get("path", "")
+                    if not os.path.exists(path):
+                        continue
+
+                    # 使用备注或文件名作为显示名称
+                    display_name = item.get("remark") or os.path.basename(path)
+                    action = menu.addAction(display_name)
+                    
+                    # 设置图标
+                    icon = self.get_icon(path)
+                    if not icon.isNull():
+                        action.setIcon(icon)
+                    
+                    # 连接信号
+                    action.triggered.connect(
+                        lambda checked, p=path: self.open_tray_item(p)
+                    )
+                except Exception as e:
+                    print(f"添加托盘菜单项时出错: {e}")
+                    continue
+
         except Exception as e:
-            print(f"处理托盘消息点击事件时出错: {e}")
+            print(f"添加托盘菜单项时出错: {e}")
+
+    def update_tray_menu(self):
+        """更新托盘菜单"""
+        try:
+            # 创建新的菜单
+            tray_menu = QMenu()
+            
+            # 显示主窗口
+            show_action = tray_menu.addAction(self.tr("show"))
+            show_action.triggered.connect(self.show_normal)
+            
+            # 添加分隔线
+            tray_menu.addSeparator()
+            
+            # 添加用户自定义项
+            self._add_tray_menu_items(tray_menu)
+            
+            # 添加分隔线
+            tray_menu.addSeparator()
+            
+            # 退出选项
+            exit_action = tray_menu.addAction(self.tr("exit"))
+            exit_action.triggered.connect(self.quit_app)
+            
+            # 设置托盘菜单
+            self.tray_icon.setContextMenu(tray_menu)
+            
+        except Exception as e:
+            print(f"更新托盘菜单时出错: {e}")
 
     def show_normal(self):
         """显示并激活主窗口"""
@@ -747,13 +797,11 @@ class QuickLaunchApp(QMainWindow):
             self.setWindowState(self.windowState() & ~Qt.WindowMinimized)
             self.raise_()
             self.activateWindow()
-            self.setWindowState(Qt.WindowActive)
             
             # 如果窗口被其他窗口遮挡，闪烁任务栏按钮
             if sys.platform == "win32":
-                from ctypes import windll
                 hwnd = self.winId().__int__()
-                windll.user32.FlashWindow(hwnd, True)
+                ctypes.windll.user32.FlashWindow(hwnd, True)
             
             # 显示窗口
             self.show()
@@ -967,53 +1015,79 @@ class QuickLaunchApp(QMainWindow):
 
     def update_file_list(self) -> None:
         """更新文件列表显示"""
-        self.file_list_widget.clear()
-        show_extensions = self.config.get("show_extensions", True)
+        try:
+            self.file_list_widget.clear()
+            show_extensions = self.config.get("show_extensions", True)
+            list_width = self.file_list_widget.viewport().width()
 
-        for file_info in self.config["files"]:
-            try:
-                if not file_info or "path" not in file_info:
+            for file_info in self.config["files"]:
+                try:
+                    if not file_info or "path" not in file_info:
+                        continue
+
+                    file_path = file_info.get("path", "")
+                    if not os.path.exists(file_path):
+                        continue
+
+                    # 创建列表项
+                    item = self._create_list_item(file_info, show_extensions, list_width)
+                    if item:
+                        self.file_list_widget.addItem(item)
+
+                except Exception as e:
+                    print(f"更新文件项时出错：{e}")
                     continue
-                file_path = file_info.get("path", "")
-                if not os.path.exists(file_path):
-                    continue
 
-                # 文件名
-                file_name = os.path.basename(file_path)
-                if not show_extensions:
-                    file_name = os.path.splitext(file_name)[0]
-                remark = file_info.get("remark", "")
-                display_name = f"{remark} ({file_name})" if remark else file_name
+        except Exception as e:
+            print(f"更新文件列表时出错：{e}")
 
-                # 创建列表项
-                item = QListWidgetItem()
-                item.setToolTip(file_path)
-                item.setIcon(self.get_icon(file_path))
+    def _create_list_item(self, file_info: Dict[str, str], show_extensions: bool, list_width: int) -> Optional[QListWidgetItem]:
+        """创建列表项"""
+        try:
+            # 构造新的显示名称
+            file_path = file_info.get("path", "")
+            file_name = (
+                os.path.basename(file_path)
+                if show_extensions
+                else os.path.splitext(os.path.basename(file_path))[0]
+            )
+            remark = file_info.get("remark", "")
+            display_name = f"{remark} ({file_name})" if remark else file_name
 
-                # 准备标签列表
-                tags = []
-                if file_info.get("admin", False):
-                    tags.append(self.tr("admin_tag"))
-                if file_info.get("params", ""):
-                    tags.append(self.tr("params_tag").format(params=file_info["params"]))
-                if any(t.get("path") == file_path for t in self.config.get("tray_items", [])):
-                    tags.append(self.tr("tray_tag"))
+            # 准备标签列表
+            tags = self._get_item_tags(file_info, file_path)
 
-                # 计算需要添加的空格数量（假设每个字符宽度为8像素）
-                list_width = self.file_list_widget.viewport().width()
-                text_width = len(display_name) * 8
-                tags_width = sum(len(tag) * 8 for tag in tags)
-                spaces_needed = max(1, (list_width - text_width - tags_width) // 8)
-                
-                # 设置显示文本，添加足够的空格
-                item.setText(display_name + " " * spaces_needed + " ".join(tags))
+            # 计算需要添加的空格数量
+            text_width = len(display_name) * 8
+            tags_width = sum(len(tag) * 8 for tag in tags)
+            spaces_needed = max(1, (list_width - text_width - tags_width) // 8)
+            
+            # 设置显示文本
+            item = QListWidgetItem()
+            item.setToolTip(file_path)
+            item.setIcon(self.get_icon(file_path))
+            item.setText(display_name + " " * spaces_needed + " ".join(tags))
+            item.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
 
-                # 设置文本对齐方式
-                item.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+            return item
 
-                self.file_list_widget.addItem(item)
-            except Exception as e:
-                print(f"更新文件列表时出错：{e}")
+        except Exception as e:
+            print(f"创建列表项时出错：{e}")
+            return None
+
+    def _get_item_tags(self, file_info: Dict[str, str], file_path: str) -> List[str]:
+        """获取项目标签列表"""
+        tags = []
+        try:
+            if file_info.get("admin", False):
+                tags.append(self.tr("admin_tag"))
+            if file_info.get("params", ""):
+                tags.append(self.tr("params_tag").format(params=file_info["params"]))
+            if any(t.get("path") == file_path for t in self.config.get("tray_items", [])):
+                tags.append(self.tr("tray_tag"))
+        except Exception as e:
+            print(f"获取项目标签时出错：{e}")
+        return tags
 
     def show_context_menu(self, pos):
         """右键菜单"""
@@ -1151,71 +1225,6 @@ class QuickLaunchApp(QMainWindow):
                 self.tr("add_to_tray_failed")
             )
 
-    def update_tray_menu(self):
-        """动态生成托盘菜单"""
-        try:
-            tray_menu = QMenu()
-            
-            # 显示主窗口
-            show_action = tray_menu.addAction(self.tr("show"))
-            show_action.triggered.connect(self.show_normal)
-            
-            # 添加分隔线
-            tray_menu.addSeparator()
-            
-            # 添加用户自定义项（过滤无效路径）
-            tray_items = self.config.get("tray_items", [])
-            valid_items = []
-            
-            for item in tray_items:
-                try:
-                    path = item.get("path", "")
-                    if os.path.exists(path):
-                        valid_items.append(item)
-                    else:
-                        print(f"无效的托盘项路径: {path}")
-                except Exception as e:
-                    print(f"处理托盘项时出错: {e}")
-                    continue
-
-            if valid_items:
-                # 添加自定义项
-                for item in valid_items:
-                    try:
-                        # 使用备注或文件名作为显示名称
-                        display_name = item.get("remark") or os.path.basename(item["path"])
-                        action = tray_menu.addAction(display_name)
-                        
-                        # 设置图标
-                        icon = self.get_icon(item["path"])
-                        if not icon.isNull():
-                            action.setIcon(icon)
-                        
-                        # 连接信号
-                        action.triggered.connect(
-                            lambda checked, p=item["path"]: self.open_tray_item(p)
-                        )
-                    except Exception as e:
-                        print(f"添加托盘菜单项时出错: {e}")
-                        continue
-
-                # 添加分隔线
-                tray_menu.addSeparator()
-            
-            # 退出选项
-            exit_action = tray_menu.addAction(self.tr("exit"))
-            exit_action.triggered.connect(self.quit_app)
-            
-            # 更新配置（移除无效项）
-            self.config["tray_items"] = valid_items
-            self.config_manager.save_config()
-            
-            # 设置托盘菜单
-            self.tray_icon.setContextMenu(tray_menu)
-            
-        except Exception as e:
-            print(f"更新托盘菜单时出错: {e}")
-
     def open_tray_item(self, path):
         """打开托盘菜单中的项"""
         for file_info in self.config["tray_items"]:
@@ -1244,24 +1253,20 @@ class QuickLaunchApp(QMainWindow):
         """打开单个文件或文件夹"""
         try:
             file_path = file_info["path"]
-            if not self._validate_file_path(file_path):
-                raise ValueError("无效的文件路径")
-            
-            if admin and not self._check_admin_permission():
-                raise PermissionError("需要管理员权限")
-            
-            # 如果 admin 参数未指定，则根据文件配置决定是否以管理员权限运行
-            if admin is None:
-                admin = file_info.get("admin", False)
-
             if not os.path.exists(file_path):
                 QMessageBox.warning(self, self.tr("error"), self.tr("file_not_found") + f": {file_path}")
                 return
+
+            # 如果 admin 参数未指定，则根据文件配置决定是否以管理员权限运行
+            if admin is None:
+                admin = file_info.get("admin", False)
 
             try:
                 if file_info.get("is_dir", False):
                     # 打开文件夹
                     os.startfile(file_path)
+                    return
+
                 if admin:
                     # 以管理员权限运行
                     shell.ShellExecuteEx(
@@ -1273,17 +1278,27 @@ class QuickLaunchApp(QMainWindow):
                     )
                 else:
                     # 普通方式运行
-                    if file_info.get("params", ""):
-                        subprocess.Popen([file_path] + file_info["params"].split())  # 使用参数启动
+                    params = file_info.get("params", "")
+                    if params:
+                        subprocess.Popen([file_path] + params.split())
                     else:
-                        os.startfile(file_path)  # 没有参数时直接启动
+                        os.startfile(file_path)
+
             except Exception as e:
+                self._log_error("文件打开失败", e)
                 QMessageBox.critical(self, self.tr("error"), f"无法打开文件：{e}")
-        except (ValueError, PermissionError) as e:
-            QMessageBox.critical(self, self.tr("error"), str(e))
+
         except Exception as e:
-            self._log_error("文件打开失败", e)
-            QMessageBox.critical(self, self.tr("error"), "文件打开失败")
+            self._log_error("文件操作失败", e)
+            QMessageBox.critical(self, self.tr("error"), "文件操作失败")
+
+    def _log_error(self, message: str, exception: Exception) -> None:
+        """记录错误日志"""
+        error_msg = f"{message}: {str(exception)}"
+        print(error_msg)
+        # 这里可以添加日志文件记录
+        # with open("error.log", "a", encoding="utf-8") as f:
+        #     f.write(f"{datetime.now()}: {error_msg}\n")
 
     def toggle_admin(self, items):
         """切换管理员权限"""
@@ -1324,6 +1339,9 @@ class QuickLaunchApp(QMainWindow):
     def update_list_item(self, item, file_info):
         """更新单个列表项显示"""
         try:
+            # 获取列表宽度
+            list_width = self.file_list_widget.viewport().width()
+            
             # 构造新的显示名称
             show_extensions = self.config.get("show_extensions", True)
             file_path = file_info["path"]
@@ -1336,21 +1354,14 @@ class QuickLaunchApp(QMainWindow):
             display_name = f"{remark} ({file_name})" if remark else file_name
 
             # 准备标签列表
-            tags = []
-            if file_info.get("admin", False):
-                tags.append(self.tr("admin_tag"))
-            if file_info.get("params", ""):
-                tags.append(self.tr("params_tag").format(params=file_info["params"]))
-            if any(t.get("path") == file_path for t in self.config.get("tray_items", [])):
-                tags.append(self.tr("tray_tag"))
+            tags = self._get_item_tags(file_info, file_path)
 
-            # 计算需要添加的空格数量（假设每个字符宽度为8像素）
-            list_width = self.file_list_widget.viewport().width()
+            # 计算需要添加的空格数量
             text_width = len(display_name) * 8
             tags_width = sum(len(tag) * 8 for tag in tags)
             spaces_needed = max(1, (list_width - text_width - tags_width) // 8)
             
-            # 设置显示文本，添加足够的空格
+            # 设置显示文本
             item.setText(display_name + " " * spaces_needed + " ".join(tags))
             item.setToolTip(file_path)
             
@@ -1457,18 +1468,6 @@ class QuickLaunchApp(QMainWindow):
         self.add_file_button.setText(self.tr("add_file"))
         self.settings_button.setText(self.tr("settings"))
         self.update_file_list()
-
-    def _validate_file_path(self, file_path):
-        # 实现文件路径验证逻辑
-        return True  # 临时返回，需要根据实际需求实现
-
-    def _check_admin_permission(self):
-        # 实现检查管理员权限的逻辑
-        return True  # 临时返回，需要根据实际需求实现
-
-    def _log_error(self, message, exception):
-        # 实现日志记录逻辑
-        print(f"{message}: {exception}")
 
     def update_tray_icon_state(self):
         """更新托盘图标状态"""
@@ -1591,6 +1590,26 @@ class QuickLaunchApp(QMainWindow):
                 self.update_list_item(item, file_info)
         except Exception as e:
             print(f"处理列表大小改变事件时出错：{e}")
+
+    def on_tray_activated(self, reason):
+        """处理托盘图标激活事件"""
+        try:
+            if reason == QSystemTrayIcon.DoubleClick:
+                self.show_normal()
+            elif reason == QSystemTrayIcon.Trigger:  # 单击
+                if self.isVisible():
+                    self.hide()
+                else:
+                    self.show_normal()
+        except Exception as e:
+            print(f"处理托盘图标激活事件时出错: {e}")
+
+    def on_tray_message_clicked(self):
+        """处理托盘消息点击事件"""
+        try:
+            self.show_normal()
+        except Exception as e:
+            print(f"处理托盘消息点击事件时出错: {e}")
 
 
 def main():
