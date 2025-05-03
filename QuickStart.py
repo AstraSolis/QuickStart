@@ -3,6 +3,7 @@ import os
 import sys
 import json
 import subprocess
+import ctypes
 
 # 第三方库导入
 from win32com.client import Dispatch
@@ -16,6 +17,12 @@ from PyQt5.QtWidgets import (
     QSystemTrayIcon
 )
 from PyQt5.QtNetwork import QLocalServer, QLocalSocket
+
+# 添加类型提示
+from typing import List, Dict, Optional
+
+
+ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('myappid') # 设置应用程序的 AppUserModelID
 
 # 检查程序是否在打包后环境中运行
 if getattr(sys, 'frozen', False):  # 如果是打包后的可执行文件
@@ -71,9 +78,11 @@ class ConfigManager:
                 with open(self.config_file, "r", encoding="utf-8") as f:
                     self.config = json.load(f)  # 加载配置到 self.config
 
-                    # 确保配置中有 'files' 键，如果没有则初始化为空列表
+                    # 确保配置中有 'files' 和 'tray_items' 键，如果没有则初始化为空列表
                     if 'files' not in self.config:
                         self.config['files'] = []
+                    if 'tray_items' not in self.config:
+                        self.config.setdefault("tray_items", [])
 
                     # 检查并删除无效文件路径
                     self.remove_invalid_files()
@@ -87,6 +96,7 @@ class ConfigManager:
                 "show_extensions": True,
                 "remove_arrow": False,
                 "minimize_to_tray": False,
+                "tray_items": [],  # 系统托盘
                 "files": []
             }
             self.save_config()  # 保存默认配置
@@ -296,15 +306,14 @@ class SettingsDialog(QDialog):
     remove_arrow_changed = pyqtSignal(bool)     # 快捷方式箭头设置变更信号
     minimize_to_tray_changed = pyqtSignal(bool)  # 系统托盘
 
-    def __init__(self, config_manager, language_manager, current_language, parent=None):
-
+    def __init__(self, config_manager, language_manager, current_language, tray_icon, parent=None):
         super().__init__(parent)
-
+        
         self.version = self._get_version()  # 添加版本号属性
-
         self.config_manager = config_manager       # 存储配置管理对象
         self.language_manager = language_manager  # 存储语言管理对象
         self.language = current_language           # 存储当前语言
+        self.tray_icon = tray_icon                # 存储托盘图标对象
 
         # 初始化窗口属性
         self.setWindowIcon(QIcon(settings_path))
@@ -450,10 +459,37 @@ class SettingsDialog(QDialog):
         self.remove_arrow_changed.emit(new_state)  # 发射信号
 
     def on_minimize_to_tray_changed(self, state):
-        """系统托盘"""
-        new_state = state == Qt.Checked
-        self.config_manager.set("minimize_to_tray", new_state)
-        self.minimize_to_tray_changed.emit(new_state)
+        """处理最小化到托盘设置变更"""
+        try:
+            new_state = state == Qt.Checked
+            self.config_manager.set("minimize_to_tray", new_state)
+            
+            if new_state:
+                # 如果启用最小化到托盘，确保托盘图标可见
+                if not self.tray_icon.isVisible():
+                    self.tray_icon.show()
+                
+                # 显示提示信息
+                QMessageBox.information(
+                    self,
+                    self.tr("settings"),
+                    self.tr("minimize_to_tray_enabled")
+                )
+            else:
+                # 如果禁用最小化到托盘，显示提示
+                QMessageBox.information(
+                    self,
+                    self.tr("settings"),
+                    self.tr("minimize_to_tray_disabled")
+                )
+        except Exception as e:
+            print(f"处理最小化到托盘设置变更时出错: {e}")
+            # 显示错误提示
+            QMessageBox.warning(
+                self,
+                self.tr("error"),
+                self.tr("minimize_to_tray_change_failed")
+            )
 
     def on_language_changed(self, language):
         """处理语言选择变更"""
@@ -482,15 +518,13 @@ class QuickLaunchApp(QMainWindow):
         # 创建系统托盘图标
         self.tray_icon = QSystemTrayIcon(self)
         self.tray_icon.setIcon(QIcon(icon_path))
-
+        
         # 创建托盘菜单
-        tray_menu = QMenu()
-        show_action = tray_menu.addAction(self.tr("show"))
-        exit_action = tray_menu.addAction(self.tr("exit"))
-        show_action.triggered.connect(self.show_normal)
-        exit_action.triggered.connect(self.quit_app)
-        self.tray_icon.setContextMenu(tray_menu)
+        self.create_tray_menu()
+        
+        # 连接托盘图标信号
         self.tray_icon.activated.connect(self.on_tray_activated)
+        self.tray_icon.messageClicked.connect(self.on_tray_message_clicked)
 
         self.file_folder_dialog = None  # 用于保存 FileFolderDialog 实例
         self.init_ui()  # 初始化界面
@@ -505,87 +539,167 @@ class QuickLaunchApp(QMainWindow):
         self.setWindowTitle(self.tr("title"))
         self.resize(900, 600)
 
+        # 创建主布局
+        main_layout = QVBoxLayout()
+        main_layout.setContentsMargins(10, 10, 10, 10)
+        main_layout.setSpacing(10)
+
+        # 顶部按钮布局
+        top_button_layout = QHBoxLayout()
+        top_button_layout.setSpacing(10)
+
+        # 添加文件按钮
+        self.add_file_button = QPushButton(self.tr("add_file"), self)
+        self.add_file_button.setIcon(QIcon(folder_path))
+        self.add_file_button.clicked.connect(self.add_files)
+        self.add_file_button.setObjectName("add_file_button")
+        top_button_layout.addWidget(self.add_file_button)
+
+        # 添加弹性空间
+        top_button_layout.addStretch()
+
+        # 设置按钮
+        self.settings_button = QPushButton(self.tr("settings"), self)
+        self.settings_button.setIcon(QIcon(settings_path))
+        self.settings_button.clicked.connect(self.show_settings)
+        self.settings_button.setObjectName("settings_button")
+        top_button_layout.addWidget(self.settings_button)
+
+        main_layout.addLayout(top_button_layout)
+
+        # 文件列表容器
+        list_container = QWidget()
+        list_container.setObjectName("list_container")
+        list_layout = QVBoxLayout(list_container)
+        list_layout.setContentsMargins(0, 0, 0, 0)
+        list_layout.setSpacing(0)
+
         # 文件列表
-        self.file_list_widget = QListWidget(self)
+        self.file_list_widget = QListWidget()
+        self.file_list_widget.setObjectName("file_list")
         self.file_list_widget.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.file_list_widget.setContextMenuPolicy(Qt.CustomContextMenu)
         self.file_list_widget.customContextMenuRequested.connect(self.show_context_menu)
         self.file_list_widget.itemDoubleClicked.connect(self.handle_double_click)
+        self.file_list_widget.setDragDropMode(QAbstractItemView.InternalMove)
+        self.file_list_widget.model().rowsMoved.connect(self.update_order_after_drag)
+        self.file_list_widget.setSpacing(1)  # 缩小文件项间距
+        
+        self.file_list_widget.setStyleSheet("""
+            QListWidget, QListWidget::item {
+                color: #222222;
+                font-size: 12px;
+            }
+            QListWidget::item:selected {
+                background: #0078D7;
+                color: #fff;
+            }
+        """)
 
-        self.file_list_widget.setDragDropMode(QAbstractItemView.InternalMove)  # 启用内部拖拽
-        self.file_list_widget.model().rowsMoved.connect(self.update_order_after_drag)  # 监听拖拽事件
+        list_layout.addWidget(self.file_list_widget)
+        main_layout.addWidget(list_container)
 
-        # 添加文件按钮
-        self.add_file_button = QPushButton(self.tr("add_file"), self)
-        self.add_file_button.clicked.connect(self.add_files)
+        # 设置主窗口的中央部件
+        central_widget = QWidget()
+        central_widget.setLayout(main_layout)
+        self.setCentralWidget(central_widget)
 
-        # 设置按钮
-        self.settings_button = QPushButton(self.tr("settings"), self)
-        self.settings_button.clicked.connect(self.show_settings)
+    def create_tray_menu(self):
+        """创建系统托盘菜单"""
+        try:
+            tray_menu = QMenu()
+            
+            # 显示主窗口
+            show_action = tray_menu.addAction(self.tr("show"))
+            show_action.triggered.connect(self.show_normal)
+            
+            # 添加分隔线
+            tray_menu.addSeparator()
+            
+            # 添加用户自定义项
+            self.update_tray_menu()
+            
+            # 添加分隔线
+            tray_menu.addSeparator()
+            
+            # 退出选项
+            exit_action = tray_menu.addAction(self.tr("exit"))
+            exit_action.triggered.connect(self.quit_app)
+            
+            self.tray_icon.setContextMenu(tray_menu)
+        except Exception as e:
+            print(f"创建托盘菜单时出错: {e}")
 
-        # 布局
-        layout = QVBoxLayout()
-        layout.addWidget(self.file_list_widget)
+    def on_tray_activated(self, reason):
+        """处理托盘图标激活事件"""
+        try:
+            if reason == QSystemTrayIcon.DoubleClick:
+                self.show_normal()
+            elif reason == QSystemTrayIcon.Trigger:  # 单击
+                if self.isVisible():
+                    self.hide()
+                else:
+                    self.show_normal()
+        except Exception as e:
+            print(f"处理托盘图标激活事件时出错: {e}")
 
-        # 顶部按钮布局
-        top_button_layout = QHBoxLayout()
-        top_button_layout.addWidget(self.add_file_button, alignment=Qt.AlignLeft)
-        self.add_file_button.setObjectName("add_file_button")
-        top_button_layout.addStretch()
-        top_button_layout.addWidget(self.settings_button, alignment=Qt.AlignRight)
-        self.settings_button.setObjectName("settings_button")
-
-        main_layout = QVBoxLayout()
-        main_layout.addLayout(top_button_layout)
-        main_layout.addLayout(layout)
-
-        container = QWidget()
-        container.setLayout(main_layout)
-        self.setCentralWidget(container)
+    def on_tray_message_clicked(self):
+        """处理托盘消息点击事件"""
+        try:
+            self.show_normal()
+        except Exception as e:
+            print(f"处理托盘消息点击事件时出错: {e}")
 
     def show_normal(self):
-        """统一窗口激活逻辑"""
-        if self.isMinimized():
-            # 如果窗口被最小化，先恢复正常状态
-            self.showNormal()
+        """显示并激活主窗口"""
+        try:
+            if self.isMinimized():
+                self.showNormal()
+            
+            # 确保窗口前置并激活
+            self.setWindowState(self.windowState() & ~Qt.WindowMinimized)
+            self.raise_()
+            self.activateWindow()
+            self.setWindowState(Qt.WindowActive)
+            
+            # 如果窗口被其他窗口遮挡，闪烁任务栏按钮
+            if sys.platform == "win32":
+                from ctypes import windll
+                hwnd = self.winId().__int__()
+                windll.user32.FlashWindow(hwnd, True)
+            
+            # 显示窗口
+            self.show()
+            
+            # 更新托盘图标状态
+            self.update_tray_icon_state()
+        except Exception as e:
+            print(f"显示窗口时出错: {e}")
 
-        # 确保窗口前置并激活
-        self.setWindowState(self.windowState() & ~Qt.WindowMinimized)  # 清除最小化状态
-
-        self.raise_()                         # 提升到父控件栈顶
-        self.activateWindow()                 # 激活窗口获取焦点
-        self.setWindowState(Qt.WindowActive)  # 强制设为活动状态
-
-        # 如果窗口被其他窗口遮挡，闪烁任务栏按钮（仅Windows）
-        if sys.platform == "win32":
-            from ctypes import windll
-            hwnd = self.winId().__int__()
-            windll.user32.FlashWindow(hwnd, True)
+    def hide(self):
+        """隐藏主窗口"""
+        try:
+            super().hide()
+            # 更新托盘图标状态
+            self.update_tray_icon_state()
+        except Exception as e:
+            print(f"隐藏窗口时出错: {e}")
 
     def quit_app(self):
         """安全退出应用程序"""
-        self.tray_icon.hide()  # 隐藏系统托盘图标（避免残留）
-        QApplication.quit()  # 终止Qt应用程序事件循环
-
-    def on_tray_activated(self, reason):
-        """处理系统托盘图标触发事件"""
-        if reason == QSystemTrayIcon.DoubleClick:
-            self.show_normal()
-
-    def closeEvent(self, event):
-        """窗口关闭事件处"""
-        if self.config.get("minimize_to_tray", False):
-            event.ignore()
-            self.hide()
-            self.tray_icon.showMessage(
-                self.tr("title"),
-                self.tr("app_running_in_tray"),
-                QSystemTrayIcon.Information,
-                2000
-            )
-            self.tray_icon.show()
-        else:
-            self.quit_app()
+        try:
+            # 保存配置
+            self.config_manager.save_config()
+            
+            # 隐藏系统托盘图标
+            self.tray_icon.hide()
+            
+            # 终止Qt应用程序事件循环
+            QApplication.quit()
+        except Exception as e:
+            print(f"退出应用程序时出错: {e}")
+            # 强制退出
+            sys.exit(1)
 
     def add_params(self, items):
         """添加启动参数"""
@@ -764,78 +878,44 @@ class QuickLaunchApp(QMainWindow):
         """获取列表中的所有项目"""
         return [self.file_list_widget.item(i) for i in range(self.file_list_widget.count())]
 
-    def update_file_list(self):
+    def update_file_list(self) -> None:
         """更新文件列表显示"""
-        # 清空文件列表显示
         self.file_list_widget.clear()
-
-        # 从配置中获取是否显示文件后缀名的设置
         show_extensions = self.config.get("show_extensions", True)
 
-        # 遍历配置中的文件列表
         for file_info in self.config["files"]:
             try:
-                # 如果文件信息无效或没有路径，跳过该项
                 if not file_info or "path" not in file_info:
                     continue
-
-                # 获取文件路径
                 file_path = file_info.get("path", "")
-                # 如果文件路径不存在于本地，跳过该项
                 if not os.path.exists(file_path):
                     continue
 
-                # 获取备注信息
+                # 文件名
+                file_name = os.path.basename(file_path)
+                if not show_extensions:
+                    file_name = os.path.splitext(file_name)[0]
                 remark = file_info.get("remark", "")
-                # 根据是否显示后缀名来决定文件名的显示格式
-                file_name = (
-                    os.path.basename(file_path)
-                    if show_extensions
-                    else os.path.splitext(os.path.basename(file_path))[0]
-                )
-                # 如果有备注，用括号包裹显示；否则仅显示文件名
                 display_name = f"{remark} ({file_name})" if remark else file_name
 
-                # 创建列表项和自定义控件
+                # 创建列表项
                 item = QListWidgetItem()
                 item.setToolTip(file_path)
                 item.setIcon(self.get_icon(file_path))
 
-                widget = QWidget()
-                layout = QHBoxLayout(widget)
-                layout.setContentsMargins(5, 2, 5, 2)
-                layout.setSpacing(10)
-
-                # 文件名部分（固定宽度左对齐）
-                name_label = QLabel(display_name)
-                name_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-                name_label.setFixedWidth(200)  # 固定宽度防止拉伸
-
-                # 右侧标签容器（右对齐）
-                right_container = QWidget()
-                right_layout = QHBoxLayout(right_container)
-                right_layout.setContentsMargins(0, 0, 0, 0)
-                right_layout.setAlignment(Qt.AlignRight)
-
-                # 管理员标签
+                # 准备标签列表
+                tags = []
                 if file_info.get("admin", False):
-                    admin_label = QLabel(f"[{self.tr('administrator')}]")
-                    admin_label.setStyleSheet("color: red; margin-right: 10px;")
-                    right_layout.addWidget(admin_label)
+                    tags.append(self.tr("admin_tag"))
+                if file_info.get("params", ""):
+                    tags.append(self.tr("params_tag").format(params=file_info["params"]))
+                if any(t.get("path") == file_path for t in self.config.get("tray_items", [])):
+                    tags.append(self.tr("tray_tag"))
 
-                # 参数标签
-                if params := file_info.get("params", ""):
-                    params_label = QLabel(f"[{self.tr('add_params')}: {params}]")
-                    params_label.setStyleSheet("color: #666666;")
-                    right_layout.addWidget(params_label)
-
-                # 组装布局
-                layout.addWidget(name_label)
-                layout.addWidget(right_container, 1)  # 给右侧容器分配剩余空间
+                # 设置显示文本
+                item.setText(display_name + "  " + " ".join(tags))
 
                 self.file_list_widget.addItem(item)
-                self.file_list_widget.setItemWidget(item, widget)
-
             except Exception as e:
                 print(f"更新文件列表时出错：{e}")
 
@@ -861,13 +941,22 @@ class QuickLaunchApp(QMainWindow):
             else:
                 toggle_admin_action = menu.addAction(self.tr("administrator"))
 
+            # 检查文件是否已在系统托盘中
+            file_path = first_file.get("path", "")
+            is_in_tray = any(item.get("path") == file_path for item in self.config.get("tray_items", []))
+            
+            # 根据文件是否在托盘中显示不同的菜单项
+            if is_in_tray:
+                tray_action = menu.addAction(self.tr("remove_from_tray"))  # 移除系统托盘
+            else:
+                tray_action = menu.addAction(self.tr("add_to_tray"))  # 添加到系统托盘
+
             location_action = menu.addAction(self.tr("open_location"))  # 打开文件所在位置
 
             # 定义 params_action 变量，默认为 None
             params_action = None
 
             # 判断文件类型是否为 .exe，只有 .exe 文件才显示启动参数
-            file_path = first_file.get("path", "")
             if file_path.endswith(".exe"):
                 params_action = menu.addAction(self.tr("add_params"))  # 添加启动参数
 
@@ -881,6 +970,11 @@ class QuickLaunchApp(QMainWindow):
                 self.delete_files(selected_items)
             elif action == toggle_admin_action:
                 self.toggle_admin(selected_items)  # 切换管理员权限
+            elif action == tray_action:
+                if is_in_tray:
+                    self.remove_from_tray(selected_items)  # 从系统托盘移除
+                else:
+                    self.add_to_tray(selected_items)  # 添加到系统托盘
             elif action == location_action:
                 self.open_file_location(selected_items[0])
             elif params_action and action == params_action:  # 只有 params_action 被添加且用户选择时才处理
@@ -888,6 +982,150 @@ class QuickLaunchApp(QMainWindow):
 
         except Exception as e:
             print(f"右键菜单出错：{e}")
+
+    def add_to_tray(self, items):
+        """将选中项添加到系统托盘菜单"""
+        try:
+            # 获取当前托盘项
+            tray_items = self.config.get("tray_items", [])
+            existing_paths = {item["path"] for item in tray_items}
+            added_count = 0
+            failed_count = 0
+
+            for item in items:
+                try:
+                    row = self.file_list_widget.row(item)
+                    file_info = self.config["files"][row]
+                    file_path = file_info["path"]
+
+                    # 检查路径有效性
+                    if not os.path.exists(file_path):
+                        failed_count += 1
+                        continue
+
+                    # 避免重复添加
+                    if file_path not in existing_paths:
+                        # 创建新的托盘项，只复制必要的信息
+                        tray_item = {
+                            "path": file_path,
+                            "name": os.path.basename(file_path),
+                            "remark": file_info.get("remark", ""),
+                            "is_dir": file_info.get("is_dir", False),
+                            "admin": file_info.get("admin", False),
+                            "params": file_info.get("params", "")
+                        }
+                        tray_items.append(tray_item)
+                        existing_paths.add(file_path)
+                        added_count += 1
+
+                except Exception as e:
+                    print(f"添加托盘项时出错: {e}")
+                    failed_count += 1
+                    continue
+
+            # 更新配置
+            self.config["tray_items"] = tray_items
+            self.config_manager.save_config()
+
+            # 更新托盘菜单
+            self.update_tray_menu()
+
+            # 立即刷新文件列表
+            self.update_file_list()
+
+            # 显示操作结果
+            if added_count > 0:
+                QMessageBox.information(
+                    self,
+                    self.tr("success"),
+                    self.tr("add_to_tray_success").format(count=added_count)
+                )
+            if failed_count > 0:
+                QMessageBox.warning(
+                    self,
+                    self.tr("warning"),
+                    self.tr("add_to_tray_partial_failed").format(count=failed_count)
+                )
+
+        except Exception as e:
+            print(f"添加到系统托盘时出错: {e}")
+            QMessageBox.critical(
+                self,
+                self.tr("error"),
+                self.tr("add_to_tray_failed")
+            )
+
+    def update_tray_menu(self):
+        """动态生成托盘菜单"""
+        try:
+            tray_menu = QMenu()
+            
+            # 显示主窗口
+            show_action = tray_menu.addAction(self.tr("show"))
+            show_action.triggered.connect(self.show_normal)
+            
+            # 添加分隔线
+            tray_menu.addSeparator()
+            
+            # 添加用户自定义项（过滤无效路径）
+            tray_items = self.config.get("tray_items", [])
+            valid_items = []
+            
+            for item in tray_items:
+                try:
+                    path = item.get("path", "")
+                    if os.path.exists(path):
+                        valid_items.append(item)
+                    else:
+                        print(f"无效的托盘项路径: {path}")
+                except Exception as e:
+                    print(f"处理托盘项时出错: {e}")
+                    continue
+
+            if valid_items:
+                # 添加自定义项
+                for item in valid_items:
+                    try:
+                        # 使用备注或文件名作为显示名称
+                        display_name = item.get("remark") or os.path.basename(item["path"])
+                        action = tray_menu.addAction(display_name)
+                        
+                        # 设置图标
+                        icon = self.get_icon(item["path"])
+                        if not icon.isNull():
+                            action.setIcon(icon)
+                        
+                        # 连接信号
+                        action.triggered.connect(
+                            lambda checked, p=item["path"]: self.open_tray_item(p)
+                        )
+                    except Exception as e:
+                        print(f"添加托盘菜单项时出错: {e}")
+                        continue
+
+                # 添加分隔线
+                tray_menu.addSeparator()
+            
+            # 退出选项
+            exit_action = tray_menu.addAction(self.tr("exit"))
+            exit_action.triggered.connect(self.quit_app)
+            
+            # 更新配置（移除无效项）
+            self.config["tray_items"] = valid_items
+            self.config_manager.save_config()
+            
+            # 设置托盘菜单
+            self.tray_icon.setContextMenu(tray_menu)
+            
+        except Exception as e:
+            print(f"更新托盘菜单时出错: {e}")
+
+    def open_tray_item(self, path):
+        """打开托盘菜单中的项"""
+        for file_info in self.config["tray_items"]:
+            if file_info["path"] == path:
+                self.open_file(file_info)
+                break
 
     def handle_double_click(self, item):
         """处理双击打开事件"""
@@ -906,40 +1144,50 @@ class QuickLaunchApp(QMainWindow):
             file_info = self.config["files"][row]
             self.open_file(file_info, admin=admin)
 
-    def open_file(self, file_info, admin=None):
+    def open_file(self, file_info: Dict[str, str], admin: Optional[bool] = None) -> None:
         """打开单个文件或文件夹"""
-        file_path = file_info["path"]
-        params = file_info.get("params", "")
-
-        # 如果 admin 参数未指定，则根据文件配置决定是否以管理员权限运行
-        if admin is None:
-            admin = file_info.get("admin", False)
-
-        if not os.path.exists(file_path):
-            QMessageBox.warning(self, self.tr("error"), self.tr("file_not_found") + f": {file_path}")
-            return
-
         try:
-            if file_info.get("is_dir", False):
-                # 打开文件夹
-                os.startfile(file_path)
-            if admin:
-                # 以管理员权限运行
-                shell.ShellExecuteEx(
-                    fMask=shellcon.SEE_MASK_NOCLOSEPROCESS,
-                    lpVerb="runas",
-                    lpFile=file_path,
-                    lpParameters=params,
-                    nShow=1
-                )
-            else:
-                # 普通方式运行
-                if params:
-                    subprocess.Popen([file_path, params])  # 使用参数启动
+            file_path = file_info["path"]
+            if not self._validate_file_path(file_path):
+                raise ValueError("无效的文件路径")
+            
+            if admin and not self._check_admin_permission():
+                raise PermissionError("需要管理员权限")
+            
+            # 如果 admin 参数未指定，则根据文件配置决定是否以管理员权限运行
+            if admin is None:
+                admin = file_info.get("admin", False)
+
+            if not os.path.exists(file_path):
+                QMessageBox.warning(self, self.tr("error"), self.tr("file_not_found") + f": {file_path}")
+                return
+
+            try:
+                if file_info.get("is_dir", False):
+                    # 打开文件夹
+                    os.startfile(file_path)
+                if admin:
+                    # 以管理员权限运行
+                    shell.ShellExecuteEx(
+                        fMask=shellcon.SEE_MASK_NOCLOSEPROCESS,
+                        lpVerb="runas",
+                        lpFile=file_path,
+                        lpParameters=file_info.get("params", ""),
+                        nShow=1
+                    )
                 else:
-                    os.startfile(file_path)  # 没有参数时直接启动
+                    # 普通方式运行
+                    if file_info.get("params", ""):
+                        subprocess.Popen([file_path] + file_info["params"].split())  # 使用参数启动
+                    else:
+                        os.startfile(file_path)  # 没有参数时直接启动
+            except Exception as e:
+                QMessageBox.critical(self, self.tr("error"), f"无法打开文件：{e}")
+        except (ValueError, PermissionError) as e:
+            QMessageBox.critical(self, self.tr("error"), str(e))
         except Exception as e:
-            QMessageBox.critical(self, self.tr("error"), f"无法打开文件：{e}")
+            self._log_error("文件打开失败", e)
+            QMessageBox.critical(self, self.tr("error"), "文件打开失败")
 
     def toggle_admin(self, items):
         """切换管理员权限"""
@@ -991,14 +1239,19 @@ class QuickLaunchApp(QMainWindow):
             remark = file_info.get("remark", "")
             display_name = f"{remark} ({file_name})" if remark else file_name
 
-            # 更新列表项文本
-            admin_text = "[administrator]" if file_info.get("admin", False) else ""
-            params = file_info.get("params", "")
-            params_text = f"[add_params: {params}]" if params else ""
+            # 准备标签列表
+            tags = []
+            if file_info.get("admin", False):
+                tags.append(self.tr("admin_tag"))
+            if file_info.get("params", ""):
+                tags.append(self.tr("params_tag").format(params=file_info["params"]))
+            if any(t.get("path") == file_path for t in self.config.get("tray_items", [])):
+                tags.append(self.tr("tray_tag"))
 
-            # 格式化显示
-            formatted_text = f"{display_name:<50} {admin_text} {params_text}"
-            item.setText(formatted_text.strip())
+            # 设置显示文本
+            item.setText(display_name + "  " + " ".join(tags))
+            item.setToolTip(file_path)
+
         except Exception as e:
             print(f"更新列表项时出错：{e}")
 
@@ -1039,12 +1292,14 @@ class QuickLaunchApp(QMainWindow):
             config_manager=self.config_manager,
             language_manager=self.language_manager,
             current_language=self.config.get("language", "中文"),
+            tray_icon=self.tray_icon,  # 传递托盘图标对象
             parent=self
         )
         # 连接所有配置变更信号
         dialog.language_changed.connect(self.handle_language_changed)
         dialog.show_extensions_changed.connect(self.handle_show_extensions_changed)
         dialog.remove_arrow_changed.connect(self.handle_remove_arrow_changed)
+        dialog.minimize_to_tray_changed.connect(self.handle_minimize_to_tray_changed)
         dialog.exec_()
 
     def handle_language_changed(self, language):
@@ -1058,12 +1313,164 @@ class QuickLaunchApp(QMainWindow):
     def handle_remove_arrow_changed(self, state):
         self.update_file_list()  # 立即刷新图标显示
 
+    def handle_minimize_to_tray_changed(self, state):
+        """处理最小化到托盘设置变更"""
+        try:
+            new_state = state == Qt.Checked
+            self.config_manager.set("minimize_to_tray", new_state)
+            
+            if new_state:
+                # 如果启用最小化到托盘，确保托盘图标可见
+                if not self.tray_icon.isVisible():
+                    self.tray_icon.show()
+                
+                # 显示提示信息
+                QMessageBox.information(
+                    self,
+                    self.tr("settings"),
+                    self.tr("minimize_to_tray_enabled")
+                )
+            else:
+                # 如果禁用最小化到托盘，显示提示
+                QMessageBox.information(
+                    self,
+                    self.tr("settings"),
+                    self.tr("minimize_to_tray_disabled")
+                )
+        except Exception as e:
+            print(f"处理最小化到托盘设置变更时出错: {e}")
+            # 显示错误提示
+            QMessageBox.warning(
+                self,
+                self.tr("error"),
+                self.tr("minimize_to_tray_change_failed")
+            )
+
     def retranslate_ui(self):
         """动态更新界面文字"""
         self.setWindowTitle(self.tr("title"))
         self.add_file_button.setText(self.tr("add_file"))
         self.settings_button.setText(self.tr("settings"))
         self.update_file_list()
+
+    def _validate_file_path(self, file_path):
+        # 实现文件路径验证逻辑
+        return True  # 临时返回，需要根据实际需求实现
+
+    def _check_admin_permission(self):
+        # 实现检查管理员权限的逻辑
+        return True  # 临时返回，需要根据实际需求实现
+
+    def _log_error(self, message, exception):
+        # 实现日志记录逻辑
+        print(f"{message}: {exception}")
+
+    def update_tray_icon_state(self):
+        """更新托盘图标状态"""
+        try:
+            if self.isVisible():
+                self.tray_icon.setToolTip(self.tr("title") + " - " + self.tr("running"))
+            else:
+                self.tray_icon.setToolTip(self.tr("title") + " - " + self.tr("minimized_to_tray"))
+        except Exception as e:
+            print(f"更新托盘图标状态时出错: {e}")
+
+    def showEvent(self, event):
+        """窗口显示事件"""
+        try:
+            super().showEvent(event)
+            self.update_tray_icon_state()
+        except Exception as e:
+            print(f"窗口显示事件处理出错: {e}")
+
+    def hideEvent(self, event):
+        """窗口隐藏事件"""
+        try:
+            super().hideEvent(event)
+            self.update_tray_icon_state()
+        except Exception as e:
+            print(f"窗口隐藏事件处理出错: {e}")
+
+    def closeEvent(self, event):
+        """窗口关闭事件处理"""
+        try:
+            if self.config.get("minimize_to_tray", False):
+                event.ignore()  # 阻止窗口关闭
+                self.hide()     # 隐藏窗口
+                
+                # 显示系统托盘提示
+                self.tray_icon.showMessage(
+                    self.tr("title"),
+                    self.tr("app_running_in_tray"),
+                    QSystemTrayIcon.Information,
+                    2000
+                )
+                
+                # 确保托盘图标可见
+                if not self.tray_icon.isVisible():
+                    self.tray_icon.show()
+            else:
+                # 如果用户选择直接退出，先保存配置
+                self.config_manager.save_config()
+                self.quit_app()
+        except Exception as e:
+            print(f"关闭窗口时出错: {e}")
+            self.quit_app()  # 发生错误时安全退出
+
+    def remove_from_tray(self, items):
+        """从系统托盘菜单中移除选中项"""
+        try:
+            # 获取当前托盘项
+            tray_items = self.config.get("tray_items", [])
+            removed_count = 0
+            failed_count = 0
+
+            for item in items:
+                try:
+                    row = self.file_list_widget.row(item)
+                    file_info = self.config["files"][row]
+                    file_path = file_info["path"]
+
+                    # 从托盘项中移除
+                    tray_items = [t for t in tray_items if t.get("path") != file_path]
+                    removed_count += 1
+
+                except Exception as e:
+                    print(f"移除托盘项时出错: {e}")
+                    failed_count += 1
+                    continue
+
+            # 更新配置
+            self.config["tray_items"] = tray_items
+            self.config_manager.save_config()
+
+            # 更新托盘菜单
+            self.update_tray_menu()
+
+            # 立即刷新文件列表
+            self.update_file_list()
+
+            # 显示操作结果
+            if removed_count > 0:
+                QMessageBox.information(
+                    self,
+                    self.tr("success"),
+                    self.tr("remove_from_tray_success").format(count=removed_count)
+                )
+            if failed_count > 0:
+                QMessageBox.warning(
+                    self,
+                    self.tr("warning"),
+                    self.tr("remove_from_tray_partial_failed").format(count=failed_count)
+                )
+
+        except Exception as e:
+            print(f"从系统托盘移除时出错: {e}")
+            QMessageBox.critical(
+                self,
+                self.tr("error"),
+                self.tr("remove_from_tray_failed")
+            )
 
 
 def main():
