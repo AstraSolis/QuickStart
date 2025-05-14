@@ -1,0 +1,216 @@
+/* 自定义输入对话框样式 */
+.input-dialog-content {
+  width: 320px;
+  padding: 20px;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+  position: relative;
+  z-index: 1001;
+  transition: transform 0.3s ease;
+  text-align: center;
+}
+
+#input-dialog-field {
+  width: 90%;
+  padding: 10px 12px;
+  margin: 15px auto;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 14px;
+  background-color: #f9f9f9;
+  color: #555;
+  transition: all 0.3s ease;
+  outline: none;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+  display: block;
+}
+
+#input-dialog-field:focus {
+  border-color: #1E88E5;
+  background-color: #fff;
+  box-shadow: 0 0 0 3px rgba(30, 136, 229, 0.15);
+}
+
+/* 自定义确认对话框样式 */
+.custom-confirm-dialog .dialog-content {
+  animation: scale-in 0.25s ease forwards;
+}
+
+@keyframes scale-in {
+  0% { transform: scale(0.8); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.custom-confirm-dialog.modal.show {
+  animation: fade-in 0.2s ease forwards;
+}
+
+@keyframes fade-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+.custom-confirm-dialog p {
+  margin-bottom: 20px;
+  color: #606266;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.custom-confirm-dialog .confirm-button.danger {
+  background-color: #f56c6c !important;
+}
+
+.custom-confirm-dialog .confirm-button.danger:hover {
+  background-color: #e64242 !important;
+  box-shadow: 0 2px 8px rgba(230, 66, 66, 0.3) !important;
+}
+
+/* 标签样式 */
+.file-tags {
+  display: flex;
+  margin-left: auto;
+  gap: 6px;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 8px;
+  font-size: 11px;
+  color: #ffffff;
+  border-radius: 4px;
+  white-space: nowrap;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  height: 20px;
+  user-select: none;
+}
+
+.admin-tag {
+  background-color: #f56c6c;
+  box-shadow: 0 2px 4px rgba(245, 108, 108, 0.2);
+}
+
+.params-tag {
+  background-color: #e6a23c;
+  box-shadow: 0 2px 4px rgba(230, 162, 60, 0.2);
+}
+
+.tray-tag {
+  background-color: #67c23a;
+  box-shadow: 0 2px 4px rgba(103, 194, 58, 0.2);
+}
+
+/* 文件项样式增强 */
+.file-item {
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #f0f0f0;
+  border-left: 3px solid transparent;
+  transition: all 0.25s ease;
+  position: relative;
+  cursor: pointer;
+  margin: 2px 0;
+  border-radius: 4px;
+}
+
+.file-item:hover {
+  background-color: #f0f7ff;
+  border-left: 3px solid rgba(0, 122, 204, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transform: translateX(2px);
+}
+
+.file-item.selected {
+  background-color: #e6f1fc;
+  border-left: 3px solid #1E88E5;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transform: translateX(3px);
+}
+
+.file-name {
+  flex: 1;
+  margin-left: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 14px;
+  color: #606266;
+  transition: color 0.2s ease;
+}
+
+.file-item:hover .file-name {
+  color: #303133;
+  font-weight: 500;
+}
+
+.file-item.selected .file-name {
+  color: #1E88E5;
+  font-weight: 500;
+}
+
+/* 确保模态对话框正确显示 */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.6);
+  backdrop-filter: blur(3px);
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.modal.show {
+  opacity: 1;
+  display: flex !important;
+}
+
+.button {
+  padding: 8px 16px;
+  margin: 5px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.25s ease;
+  min-width: 80px;
+}
+
+.confirm-button {
+  background-color: #1E88E5;
+  color: white;
+}
+
+.confirm-button:hover {
+  background-color: #1976D2;
+  box-shadow: 0 2px 8px rgba(30, 136, 229, 0.3);
+}
+
+.cancel-button {
+  background-color: #f5f5f5;
+  color: #666;
+  border: 1px solid #e0e0e0;
+}
+
+.cancel-button:hover {
+  background-color: #eeeeee;
+  color: #444;
+}
+
+.dialog-buttons {
+  display: flex;
+  justify-content: center;
+  margin-top: 18px;
+  gap: 12px;
+} 

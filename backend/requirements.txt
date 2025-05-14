@@ -1,0 +1,5 @@
+flask
+flask-cors
+pywin32
+Pillow
+# SQLite是Python标准库的一部分，无需额外安装

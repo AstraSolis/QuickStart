@@ -1,0 +1,1775 @@
+/* 全局样式 */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none; /* 禁止文本选择 */
+}
+
+body {
+  font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+  background-color: #ffffff;
+  color: #333333;
+  font-size: 14px;
+  line-height: 1.5;
+  height: 100vh;
+  overflow: hidden;
+  opacity: 0;
+  animation: fadeInPage 0.3s ease-in-out forwards;
+  animation-delay: 0.1s;
+}
+
+.container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  padding: 0;
+  border: 1px solid #d0d0d0;
+  overflow: hidden;
+}
+
+/* 顶部工具栏样式 */
+.toolbar {
+  display: flex;
+  align-items: center;
+  background: linear-gradient(to right, #f8f9fa, #f0f2f5);
+  padding: 12px 15px;
+  color: #333;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  position: relative;
+  z-index: 10;
+}
+
+.toolbar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: #333;
+  cursor: pointer;
+  padding: 7px 14px;
+  border-radius: 5px;
+  transition: all 0.2s ease-in-out;
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.toolbar-btn:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  transform: translateY(-1px);
+}
+
+#add-file-btn, #settings-btn {
+  background-color: #1E88E5;
+  color: white;
+  box-shadow: 0 2px 5px rgba(30, 136, 229, 0.3);
+  padding: 7px 14px;
+}
+
+#add-file-btn:hover, #settings-btn:hover {
+  background-color: #1976D2;
+  box-shadow: 0 4px 8px rgba(30, 136, 229, 0.4);
+  transform: translateY(-1px);
+}
+
+.btn-icon {
+  font-size: 16px;
+  margin-right: 5px;
+}
+
+.btn-text {
+  font-size: 13px;
+}
+
+.spacer {
+  flex-grow: 1;
+}
+
+.btn {
+  background-color: #f0f0f0;
+  border: 1px solid #d0d0d0;
+  border-radius: 3px;
+  color: #333;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 6px 12px;
+  transition: all 0.2s;
+  outline: none;
+}
+
+.btn:hover {
+  background-color: #e0e0e0;
+}
+
+.btn.primary {
+  background-color: #007acc;
+  border-color: #007acc;
+  color: #fff;
+}
+
+.btn.primary:hover {
+  background-color: #0062a3;
+  border-color: #0062a3;
+}
+
+/* 文件列表容器 */
+.file-list-container {
+  flex-grow: 1;
+  overflow: auto;
+  background-color: #fff;
+  border: none;
+  padding: 8px 5px;
+  position: relative;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.03);
+  scrollbar-width: thin;
+}
+
+.file-list-container::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.file-list-container::-webkit-scrollbar-track {
+  background: #f5f5f5;
+}
+
+.file-list-container::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 3px;
+}
+
+.file-list-container::-webkit-scrollbar-thumb:hover {
+  background: #999;
+}
+
+/* 文件列表 */
+.file-list {
+  width: 100%;
+  padding: 8px 0;
+}
+
+/* 文件项基础样式 - 强制一行显示并垂直居中对齐 */
+.file-item {
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #f0f0f0;
+  border-left: 3px solid transparent;
+  transition: all 0.2s ease-in-out;
+  position: relative;
+  cursor: pointer;
+  border-radius: 4px;
+  margin: 2px 0;
+}
+
+/* 文件图标 - 确保垂直居中 */
+.file-icon {
+  width: 28px;
+  height: 28px;
+  min-width: 28px; /* 确保最小宽度 */
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  margin-right: 15px;
+  flex-shrink: 0; /* 防止缩小 */
+  display: inline-flex; /* 改为inline-flex */
+  align-items: center; /* 垂直居中 */
+  justify-content: center; /* 水平居中 */
+  position: relative; /* 添加相对定位 */
+  top: 0; /* 确保不偏移 */
+  vertical-align: middle; /* 保持垂直居中 */
+  border-radius: 4px; /* 添加圆角 */
+  overflow: hidden; /* 确保图标不溢出 */
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* 文件夹图标 */
+.folder-icon {
+  background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAA7ElEQVR4AWJwL/ABtI+JS0TEvIjYj4izEXEXEWcsNrEfCXDs6kIHOGMHkI8cADNPALgE8ImZq9NdATMvAXi8KTofAVTujItzUwB4xczreQewR2ae+gDmXeYAZp7Nt20LcQIAzwAO7n0AcNJ8YuZZ8/MegD0zz90LT00za+zLBWauXQTQBn6/NDMLAOO2f3MRAH2JJyJumfmi3k9ExLuIWETElz7gIiJWEfG07Wcj4qD8nyPictyvI+J4LX8SQZ/XkYdeBzDzwQPAOQD3JeC2/N+Ud/tl3n8A2Kvg5nkOHjoAPqjgOvCXVe4FNM9TnMArN1cw6M1q8ysAAAAASUVORK5CYII=') !important;
+  background-size: 80% !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  background-color: transparent !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  filter: invert(65%) sepia(20%) saturate(1000%) hue-rotate(80deg) brightness(95%) contrast(95%) !important;
+  opacity: 0.9;
+}
+
+/* 文件名 - 确保垂直居中 */
+.file-name {
+  flex: 1;
+  margin-left: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 14px;
+  color: #606266;
+  transition: color 0.2s ease;
+}
+
+/* 文件标签容器 - 确保垂直居中 */
+.file-tags {
+  display: inline-flex; /* 使用inline-flex */
+  flex-direction: row;
+  align-items: center; /* 垂直居中对齐 */
+  gap: 6px;
+  flex-shrink: 0; /* 禁止缩小 */
+  margin-left: auto; /* 确保右对齐 */
+  white-space: nowrap; /* 防止换行 */
+  height: 28px; /* 与图标高度一致 */
+  position: relative; /* 添加相对定位 */
+  top: 0; /* 确保不偏移 */
+}
+
+/* 标签样式 - 确保垂直居中 */
+.tag {
+  display: inline-flex; /* 使用inline-flex */
+  align-items: center; /* 垂直居中对齐 */
+  justify-content: center; /* 水平居中对齐 */
+  background-color: #f0f2f5;
+  color: #606266;
+  border-radius: 3px;
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 500; /* 加粗标签 */
+  white-space: nowrap;
+  height: 22px; /* 固定高度 */
+  line-height: 22px; /* 添加行高与高度匹配 */
+  user-select: none; /* 防止选中 */
+  border: none; /* 确保没有边框 */
+  margin-top: 0; /* 确保没有上边距 */
+  margin-bottom: 0; /* 确保没有下边距 */
+  position: relative; /* 添加相对定位 */
+  top: 0; /* 确保不偏移 */
+  vertical-align: middle; /* 保持垂直居中 */
+}
+
+/* 特定标签样式 */
+.admin-tag {
+  background-color: #fef0f0;
+  color: #f56c6c;
+  border: 1px solid rgba(245, 108, 108, 0.2);
+}
+
+.params-tag {
+  background-color: #fdf6ec;
+  color: #e6a23c;
+  border: 1px solid rgba(230, 162, 60, 0.2);
+}
+
+.tray-tag {
+  background-color: #f0f9eb;
+  color: #67c23a;
+  border: 1px solid rgba(103, 194, 58, 0.2);
+}
+
+/* 添加更精细的悬停效果 */
+.file-item:hover {
+  background-color: #f0f7ff;
+  border-left: 3px solid rgba(0, 122, 204, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transform: translateX(2px);
+}
+
+/* 选中效果 - 浅蓝色背景 */
+.file-item.selected {
+  background-color: #e6f1fc;
+  border-left: 3px solid #007acc;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transform: translateX(3px);
+}
+
+/* 多选效果 - 浅蓝色背景和左边框 */
+.file-item.multi-selected {
+  background-color: #e1edfa;
+  border-left: 3px solid #007acc;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* 添加波纹效果 */
+.file-item-ripple {
+  position: absolute;
+  background: rgba(0, 122, 204, 0.1);
+  border-radius: 50%;
+  width: 100px;
+  height: 100px;
+  margin-top: -50px;
+  margin-left: -50px;
+  animation: ripple-effect 0.8s ease-out;
+  pointer-events: none; /* 确保不会干扰点击事件 */
+  z-index: 0;
+}
+
+@keyframes ripple-effect {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(3);
+    opacity: 0;
+  }
+}
+
+/* 右键菜单样式 */
+.context-menu {
+  position: fixed;
+  background-color: white;
+  border: none;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  min-width: 160px;
+  display: none;
+  padding: 5px 0;
+  animation: scaleIn 0.15s ease-out;
+  overflow: hidden;
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.context-menu-item {
+  padding: 8px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s ease;
+  color: #303133;
+}
+
+.context-menu-item:hover {
+  background-color: #f0f7ff;
+  color: #1E88E5;
+}
+
+.context-menu-item.delete-option {
+  color: #f56c6c;
+}
+
+.context-menu-item.delete-option:hover {
+  background-color: #fef0f0;
+}
+
+.context-menu-separator {
+  height: 1px;
+  background-color: #ebeef5;
+  margin: 5px 0;
+}
+
+/* 右键菜单禁用项 */
+.context-menu-item.disabled {
+  color: #909090;
+  cursor: not-allowed;
+}
+
+.context-menu-item.disabled:hover {
+  background-color: transparent;
+}
+
+/* 对话框样式 - 修改为相对于容器定位 */
+.dialog {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+}
+
+.dialog-content {
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  padding: 20px;
+  width: 400px;
+  max-width: 90%;
+  margin: auto;
+  position: relative;
+}
+
+.dialog h2 {
+  margin-bottom: 20px;
+  color: #333;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.form-group {
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+}
+
+.form-group label {
+  flex: 0 0 140px;
+  color: #333;
+  font-size: 13px;
+}
+
+.form-group input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+}
+
+.form-group select {
+  border: 1px solid #d0d0d0;
+  border-radius: 3px;
+  color: #333;
+  height: 28px;
+  padding: 0 8px;
+  width: 100%;
+  outline: none;
+  font-size: 13px;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 25px;
+}
+
+.version-info {
+  font-size: 12px;
+  color: #909399;
+  display: flex;
+  flex-direction: column;
+}
+
+.version-info a {
+  color: #007acc;
+  text-decoration: none;
+}
+
+.button-group {
+  display: flex;
+  gap: 8px;
+}
+
+/* 加载中覆盖层样式 */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.7);
+  z-index: 3000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #007acc;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 消息提示样式 */
+.message {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 8px 12px;
+  border-radius: 3px;
+  color: white;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 1000;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  max-width: 250px;
+  font-size: 13px;
+  text-align: center;
+}
+
+.message.show {
+  opacity: 1;
+}
+
+.message.info {
+  background-color: #007acc;
+}
+
+.message.success {
+  background-color: #4CAF50;
+}
+
+.message.warning {
+  background-color: #FF9800;
+}
+
+.message.error {
+  background-color: #F44336;
+}
+
+/* 拖放效果 */
+.file-list-container.drag-over {
+  border: 2px dashed #007acc;
+}
+
+/* 添加文件拖放区提示 */
+.drop-zone-hint {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #909399;
+  padding: 20px;
+  text-align: center;
+  background-color: #f9fafc;
+  border-radius: 8px;
+  margin: 10px;
+  border: 2px dashed #e0e0e0;
+  transition: all 0.3s ease;
+}
+
+.file-list-container.empty .drop-zone-hint {
+  display: flex;
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.drop-zone-hint p {
+  margin: 5px 0;
+  font-size: 14px;
+  color: #909399;
+}
+
+.drop-zone-hint p:first-child {
+  font-size: 16px;
+  font-weight: 500;
+  color: #606266;
+  margin-bottom: 8px;
+}
+
+/* 拖拽排序相关样式 */
+.file-item.dragging {
+  opacity: 0.5;
+  background-color: #e8f5fe;
+  border: 1px dashed #007acc;
+}
+
+.file-item.drag-over-item {
+  border-top: 2px solid #007acc;
+  background-color: #f5f9fc;
+}
+
+/* 添加拖拽提示指针样式 */
+.file-item[draggable="true"] {
+  cursor: grab;
+}
+
+.file-item[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+/* 文件/文件夹选择对话框样式 */
+.file-type-selection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 15px 0;
+  width: 100%;
+}
+
+/* 完全重置文件类型按钮样式 */
+.file-type-btn {
+  height: 50px;
+  display: flex;
+  align-items: center;
+  padding: 0 15px;
+  border-radius: 8px;
+  transition: all 0.25s ease;
+  cursor: pointer;
+  background-color: #fff;
+  border: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  width: 100%;
+  text-align: left;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+/* 统一文件图标样式 - 使用纯色块和Material Icons */
+.file-type-icon {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  border: none;
+  outline: none;
+  box-shadow: none;
+  overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* 文件类型文本 */
+.file-type-text {
+  font-size: 14px;
+  font-weight: 500;
+  flex: 1;
+}
+
+/* 文件按钮样式 - 纯蓝色系 */
+#select-file-btn {
+  background-color: #e8f4fe;
+  border: none;
+}
+
+#select-file-btn .file-type-icon {
+  background-color: #2196F3;
+  color: white;
+}
+
+#select-file-btn .file-type-text {
+  color: #1976D2;
+}
+
+#select-file-btn:hover {
+  background-color: #d4ebfd;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(33, 150, 243, 0.15);
+}
+
+/* 文件夹按钮样式 - 纯绿色系 */
+#select-folder-btn {
+  background-color: #e8f5e9;
+  border: none;
+}
+
+#select-folder-btn .file-type-icon {
+  background-color: #4CAF50;
+  color: white;
+}
+
+#select-folder-btn .file-type-text {
+  color: #388E3C;
+}
+
+#select-folder-btn:hover {
+  background-color: #d4ebd5;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(76, 175, 80, 0.15);
+}
+
+/* 图标内部的Material Icons统一样式 */
+.file-type-icon i.material-icons {
+  font-size: 20px;
+  color: white;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  border: none;
+  outline: none;
+  text-shadow: none;
+  box-shadow: none;
+}
+
+/* 取消按钮 */
+#add-file-dialog .dialog-footer {
+  margin-top: 15px;
+  padding-top: 12px;
+  border-top: 1px solid #ebeef5;
+  display: flex;
+  justify-content: center;
+}
+
+/* 响应式样式 */
+@media (max-width: 768px) {
+  .form-group {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .form-group label {
+    margin-bottom: 5px;
+  }
+  
+  .dialog-footer {
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .version-info {
+    order: 2;
+  }
+  
+  .button-group {
+    order: 1;
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+/* 可点击路径样式 */
+.clickable-path {
+  color: #007acc;
+  text-decoration: underline;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.clickable-path:hover {
+  color: #0062a3;
+}
+
+/* 确保所有元素在同一行上对齐 */
+.file-item {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  width: 100% !important;
+  position: relative !important;
+}
+
+/* 对话框中的取消按钮样式 */
+#add-file-dialog #add-file-cancel-btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  background-color: #f5f5f5;
+  color: #606266;
+  border: 1px solid #dcdfe6;
+  transition: all 0.2s;
+  cursor: pointer;
+  min-width: 80px;
+  text-align: center;
+}
+
+#add-file-dialog #add-file-cancel-btn:hover {
+  background-color: #e9e9e9;
+  color: #303133;
+}
+
+/* 自定义输入对话框样式美化 */
+.modal {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: none;
+  z-index: 2000;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  backdrop-filter: blur(3px);
+}
+
+.modal.show {
+  opacity: 1;
+  display: flex !important;
+}
+
+.input-dialog-content {
+  background-color: #fff;
+  border-radius: 8px;
+  width: 320px;
+  padding: 20px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+  transform: none !important;
+  transition: transform 0.3s ease;
+  position: static !important;
+  text-align: center;
+  margin: auto !important;
+  max-width: 90%;
+  top: auto !important;
+  left: auto !important;
+}
+
+/* 覆盖dialog-content的默认位置设置 */
+.modal .dialog-content {
+  position: static !important;
+  transform: none !important;
+  top: auto !important;
+  left: auto !important;
+}
+
+/* 进一步确保输入对话框在窗口中央 */
+#input-dialog .dialog-content {
+  position: relative;
+  left: auto;
+  top: auto;
+  transform: none;
+}
+
+/* 确保整个modal对话框在窗口中居中显示 */
+#input-dialog {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#input-dialog-title {
+  font-size: 16px;
+  color: #333;
+  margin-bottom: 16px;
+  text-align: center;
+  font-weight: 500;
+}
+
+#input-dialog-field {
+  width: 85%;
+  height: 36px;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 14px;
+  color: #555;
+  background-color: #f9f9f9;
+  transition: all 0.3s ease;
+  outline: none;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+  margin: 0 auto;
+  display: block;
+}
+
+#input-dialog-field:focus {
+  border-color: #1E88E5;
+  background-color: #fff;
+  box-shadow: 0 0 0 3px rgba(30, 136, 229, 0.15);
+}
+
+.dialog-buttons {
+  display: flex;
+  justify-content: center;
+  margin-top: 18px;
+  gap: 15px;
+}
+
+.button {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  border: none;
+  outline: none;
+  min-width: 80px;
+  text-align: center;
+}
+
+.cancel-button {
+  background-color: #f5f5f5;
+  color: #666;
+  border: 1px solid #e0e0e0;
+}
+
+.cancel-button:hover {
+  background-color: #eeeeee;
+  color: #444;
+}
+
+.confirm-button {
+  background-color: #1E88E5;
+  color: white;
+}
+
+.confirm-button:hover {
+  background-color: #1976D2;
+  box-shadow: 0 2px 8px rgba(30, 136, 229, 0.3);
+}
+
+/* 添加动画效果 */
+#input-dialog.modal {
+  backdrop-filter: blur(3px);
+}
+
+/* 添加适应移动设备的响应式设计 */
+@media (max-width: 480px) {
+  .input-dialog-content {
+    width: 90%;
+    padding: 20px;
+  }
+  
+  #input-dialog-title {
+    font-size: 16px;
+    margin-bottom: 15px;
+  }
+  
+  #input-dialog-field {
+    height: 40px;
+    font-size: 14px;
+  }
+  
+  .button {
+    padding: 8px 16px;
+    font-size: 14px;
+  }
+}
+
+#input-dialog .form-group {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+  width: 100%;
+}
+
+/* 选中状态时的文本颜色 */
+.file-item.selected .file-name,
+.file-item.multi-selected .file-name {
+  color: #1a73e8;
+}
+
+@keyframes fadeInPage {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* 设置对话框样式 */
+#settings-dialog {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  transition: opacity 0.3s ease;
+}
+
+#settings-dialog.show {
+  display: flex;
+}
+
+#settings-dialog .dialog-content {
+  width: 400px;
+  border-radius: 10px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  padding: 20px;
+  margin: 0 auto;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+#settings-dialog.show .dialog-content {
+  animation: dialogFadeInCenter 0.3s ease-out;
+}
+
+@keyframes dialogFadeInCenter {
+  from { 
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.98);
+  }
+  to { 
+    opacity: 1; 
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+#settings-dialog h2 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #262626;
+  margin: 0 0 15px 0;
+  text-align: left;
+  position: relative;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #ebeef5;
+}
+
+#settings-dialog h2:after {
+  display: none;
+}
+
+.settings-tabs {
+  display: flex;
+  border-bottom: none;
+  margin-bottom: 15px;
+  padding-bottom: 0;
+  position: relative;
+  justify-content: flex-start;
+}
+
+.tab-button {
+  padding: 6px 12px;
+  background: none;
+  border: none !important;
+  cursor: pointer;
+  margin-right: 8px;
+  font-weight: 500;
+  font-size: 14px;
+  color: #606266;
+  transition: all 0.25s ease;
+  border-radius: 20px;
+  position: relative;
+  outline: none;
+  text-decoration: none;
+  box-shadow: none;
+}
+
+.tab-button:hover {
+  color: #2196F3;
+}
+
+.tab-button:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
+  text-decoration: none !important;
+}
+
+.tab-button.active {
+  color: #2196F3;
+  background-color: #EBF5FE;
+  font-weight: 500;
+  border: none !important;
+  box-shadow: none !important;
+  text-decoration: none !important;
+}
+
+.tab-content {
+  padding: 5px 0;
+  display: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.tab-content.active {
+  display: block;
+  opacity: 1;
+  animation: fadeContent 0.3s ease;
+}
+
+@keyframes fadeContent {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.settings-dialog-content .form-group {
+  margin-bottom: 12px;
+  align-items: center;
+  display: flex;
+  padding: 4px 0;
+}
+
+.settings-dialog-content .form-group label {
+  flex: 0 0 110px;
+  font-size: 14px;
+  color: #4a4a4a;
+  font-weight: normal;
+}
+
+.settings-dialog-content .form-group input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #2196F3;
+  margin-right: 8px;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.settings-dialog-content .form-group select {
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 14px;
+  color: #606266;
+  background-color: #f9fafc;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.06);
+  transition: all 0.25s ease;
+  width: 100%;
+  height: 32px;
+  outline: none;
+}
+
+.settings-dialog-content .dialog-footer {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #ebeef5;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.settings-dialog-content .button-group {
+  display: flex;
+  gap: 10px;
+}
+
+.settings-dialog-content .button-group button {
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.25s ease;
+  cursor: pointer;
+  border: none;
+  outline: none;
+}
+
+#settings-save-btn {
+  background-color: #2196F3;
+  color: white;
+  box-shadow: 0 2px 4px rgba(33, 150, 243, 0.25);
+}
+
+#settings-save-btn:hover {
+  background-color: #1E88E5;
+  box-shadow: 0 3px 6px rgba(33, 150, 243, 0.3);
+}
+
+#settings-cancel-btn {
+  background-color: #f5f7fa;
+  color: #606266;
+  border: 1px solid #dcdfe6;
+}
+
+/* 样式设置标签的提示文本 */
+#style-tab p {
+  color: #909399;
+  font-size: 14px;
+  line-height: 1.6;
+  text-align: center;
+  padding: 15px;
+  background-color: #f8f9fc;
+  border-radius: 6px;
+  border-left: 3px solid #909399;
+}
+
+/* 关于标签的样式 */
+#about-tab .form-group {
+  margin-bottom: 14px;
+}
+
+#about-tab label {
+  font-weight: 500;
+  color: #606266;
+}
+
+#about-tab span, #about-tab a {
+  font-size: 14px;
+  color: #606266;
+}
+
+#about-tab a {
+  color: #1E88E5;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+#about-tab a:hover {
+  color: #1565C0;
+  text-decoration: underline;
+}
+
+#config-path {
+  font-size: 13px !important;
+  color: #909399 !important;
+  background-color: #f9fafc;
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: 1px solid #ebeef5;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#reset-all-btn {
+  position: relative !important;
+  background-color: #f56c6c !important;
+  color: white !important;
+  font-size: 13px !important;
+  padding: 5px 10px !important;
+  border-radius: 4px !important;
+  border: none !important;
+  font-weight: 500 !important;
+  transition: all 0.25s ease !important;
+  margin-left: 10px !important;
+  white-space: nowrap;
+}
+
+#reset-all-btn:hover {
+  background-color: #e64242 !important;
+  box-shadow: 0 2px 5px rgba(229, 66, 66, 0.3) !important;
+}
+
+/* 确保重置按钮与配置路径在同一行 */
+.settings-dialog-content .form-group:last-child {
+  align-items: flex-start;
+}
+
+.settings-dialog-content .form-group:last-child > div {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+/* 添加文件对话框样式完善 */
+#add-file-dialog {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#add-file-dialog .dialog-content {
+  padding: 24px;
+  width: 320px;
+  border-radius: 12px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  position: static;
+  transform: none !important;
+}
+
+#add-file-dialog.show {
+  display: flex;
+}
+
+#add-file-dialog h2 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #303133;
+  margin: 0 0 20px 0;
+  text-align: center;
+  letter-spacing: 0.5px;
+}
+
+/* 文件类型选择区域美化 */
+.file-type-selection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  margin: 10px 0 20px 0;
+}
+
+/* 取消按钮美化 */
+#add-file-cancel-btn {
+  padding: 8px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  background-color: #f5f5f5;
+  color: #606266;
+  border: 1px solid #dcdfe6;
+  transition: all 0.2s;
+  cursor: pointer;
+  min-width: 80px;
+  margin-top: 5px;
+}
+
+#add-file-cancel-btn:hover {
+  background-color: #e9e9e9;
+  color: #303133;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+/* 对话框底部区域美化 */
+#add-file-dialog .dialog-footer {
+  margin-top: 5px;
+  display: flex;
+  justify-content: center;
+}
+
+/* 文件类型选择按钮 */
+.file-type-btn {
+  height: 50px;
+  display: flex;
+  align-items: center;
+  padding: 0 15px;
+  border-radius: 8px;
+  transition: all 0.25s ease;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  background-color: #fff;
+  border: none;
+  width: 100%;
+  text-align: left;
+}
+
+/* 文件按钮样式 */
+#select-file-btn {
+  background-color: rgba(33, 150, 243, 0.1);
+  border: none;
+  color: #1E88E5;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+#select-file-btn .file-type-icon {
+  background-color: #1E88E5;
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.25);
+  border: none !important;
+  outline: none !important;
+  overflow: hidden;
+  border-radius: 10px;
+}
+
+#select-file-btn .file-type-icon i.material-icons {
+  color: #ffffff;
+  font-size: 22px;
+  border: none !important;
+  outline: none !important;
+  text-shadow: none;
+  filter: none;
+  box-shadow: none !important;
+}
+
+#select-file-btn:hover {
+  background-color: rgba(33, 150, 243, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(33, 150, 243, 0.2);
+}
+
+/* 文件夹按钮样式 */
+#select-folder-btn {
+  background-color: rgba(76, 175, 80, 0.1);
+  border: none;
+  color: #43a047;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+#select-folder-btn .file-type-icon {
+  background-color: #43a047;
+  border: none;
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.25);
+  overflow: hidden;
+  border-radius: 10px;
+}
+
+#select-folder-btn .file-type-icon i.material-icons {
+  color: #ffffff;
+  font-size: 22px;
+  border: none;
+  filter: none;
+  text-shadow: none;
+}
+
+#select-folder-btn:hover {
+  background-color: rgba(76, 175, 80, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(76, 175, 80, 0.2);
+}
+
+#select-folder-btn:hover .file-type-icon {
+  transform: scale(1.1);
+}
+
+.file-type-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: inherit;
+}
+
+/* 修复添加文件窗口的图标 */
+.file-type-btn .file-type-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin-right: 12px;
+  border-radius: 10px;
+  border: none;
+  outline: none;
+}
+
+/* 文件选择按钮图标 */
+#select-file-btn .file-type-icon {
+  background-color: #1E88E5;
+  border: none;
+}
+
+#select-file-btn .file-type-icon i.material-icons {
+  color: #ffffff;
+  font-size: 22px;
+  border: none;
+}
+
+/* 文件夹选择按钮图标 */
+#select-folder-btn .file-type-icon {
+  background-color: #43a047;
+  border: none;
+}
+
+#select-folder-btn .file-type-icon i.material-icons {
+  color: #ffffff;
+  font-size: 22px;
+  border: none;
+}
+
+/* 文件和文件夹图标样式 */
+.file-type-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  margin-right: 12px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+/* Material Icons样式 */
+.file-type-icon i.material-icons {
+  font-size: 20px;
+}
+
+/* 文件按钮图标 */
+#select-file-btn .file-type-icon {
+  background-color: rgba(30, 136, 229, 0.1);
+}
+
+#select-file-btn .file-type-icon i.material-icons {
+  color: #1E88E5;
+}
+
+/* 文件夹按钮图标 */
+#select-folder-btn .file-type-icon {
+  background-color: rgba(103, 194, 58, 0.1);
+}
+
+#select-folder-btn .file-type-icon i.material-icons {
+  color: #67c23a;
+}
+
+/* 添加文件对话框标题 */
+#add-file-dialog h2 {
+  font-size: 16px;
+  font-weight: 500;
+  color: #303133;
+  margin: 0 0 20px 0;
+  text-align: center;
+}
+
+/* 确保所有对话框在显示时正确水平和垂直居中 */
+.dialog {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.dialog-content {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 确保添加文件对话框中的内容正确居中 */
+#add-file-dialog .dialog-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.file-type-selection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+/* 对话框显示状态的改进 */
+.dialog.show {
+  display: flex !important;
+}
+
+/* 文件图标效果改进 */
+#select-file-btn .file-type-icon, 
+#select-folder-btn .file-type-icon {
+  transition: all 0.3s ease;
+  border: none;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+#select-file-btn:hover .file-type-icon, 
+#select-folder-btn:hover .file-type-icon {
+  transform: scale(1.1);
+}
+
+/* 文件图标细节调整 */
+.file-type-icon i.material-icons {
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  border: none;
+  outline: none;
+}
+
+/* 文件夹图标特别处理 - 移除可能的黑色边框 */
+.folder-icon {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* 文件和文件夹按钮样式统一 */
+#select-file-btn .file-type-icon,
+#select-folder-btn .file-type-icon {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  border: none !important;
+  outline: none !important;
+  overflow: hidden;
+}
+
+/* 文件图标样式 */
+#select-file-btn .file-type-icon {
+  background-color: #1E88E5;
+}
+
+#select-file-btn .file-type-icon i.material-icons {
+  font-size: 20px;
+  color: #ffffff;
+  border: none !important;
+  outline: none !important;
+  text-shadow: none;
+  filter: none;
+  box-shadow: none !important;
+}
+
+/* 文件夹图标样式 */
+#select-folder-btn .file-type-icon {
+  background-color: #43a047;
+}
+
+#select-folder-btn .file-type-icon i.material-icons {
+  font-size: 20px;
+  color: #ffffff;
+  border: none !important;
+  outline: none !important;
+  text-shadow: none;
+  filter: none;
+  box-shadow: none !important;
+}
+
+/* 文件夹图标 - 修改为使用Material图标 */
+#select-folder-btn .file-type-icon i.material-icons {
+  font-size: 20px;
+  color: #ffffff;
+}
+
+/* 悬停效果统一 */
+#select-file-btn:hover .file-type-icon,
+#select-folder-btn:hover .file-type-icon {
+  transform: scale(1.1);
+}
+
+/* 文件按钮样式 */
+#select-file-btn {
+  background-color: rgba(33, 150, 243, 0.1);
+  border: none;
+  color: #1E88E5;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+#select-file-btn:hover {
+  background-color: rgba(33, 150, 243, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(33, 150, 243, 0.2);
+}
+
+/* 文件夹按钮样式 */
+#select-folder-btn {
+  background-color: rgba(76, 175, 80, 0.1);
+  border: none;
+  color: #43a047;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+#select-folder-btn:hover {
+  background-color: rgba(76, 175, 80, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(76, 175, 80, 0.2);
+}
+
+/* 样式设置标签 - 即将推出提示 */
+.coming-soon-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 30px 20px;
+  text-align: center;
+}
+
+.coming-soon-icon {
+  color: #64B5F6;
+  margin-bottom: 15px;
+  animation: pulse 2s infinite ease-in-out;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.05); opacity: 1; }
+  100% { transform: scale(1); opacity: 0.8; }
+}
+
+.coming-soon-container h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #455A64;
+  margin: 0 0 12px 0;
+}
+
+.coming-soon-container p {
+  font-size: 14px;
+  color: #78909C;
+  line-height: 1.5;
+  max-width: 280px;
+  margin: 0;
+}
+
+/* 关于标签样式 */
+.about-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 0 20px;
+}
+
+.app-logo {
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.app-logo img {
+  width: 80px;
+  height: 80px;
+  border-radius: 12px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+}
+
+.app-logo img:hover {
+  transform: scale(1.05);
+}
+
+.app-info {
+  width: 100%;
+}
+
+.about-container .form-group {
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+}
+
+.about-container .form-group label {
+  font-weight: 500;
+  color: #455A64;
+  flex: 0 0 80px;
+  font-size: 14px;
+}
+
+.about-container .form-group span {
+  font-size: 14px;
+  color: #607D8B;
+}
+
+.project-link {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: #1E88E5;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.project-link svg {
+  margin-right: 6px;
+  transition: transform 0.2s ease;
+}
+
+.project-link:hover {
+  color: #1565C0;
+}
+
+.project-link:hover svg {
+  transform: scale(1.1);
+}
+
+.copyright {
+  margin-top: 25px;
+  text-align: center;
+}
+
+.copyright p {
+  font-size: 12px;
+  color: #90A4AE;
+  margin: 0;
+}
+
+/* 让确定和取消按钮更加突出 */
+#settings-save-btn, #settings-cancel-btn {
+  min-width: 80px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#settings-save-btn:hover {
+  transform: translateY(-2px);
+}
+
+.settings-dialog-content .form-group select:focus,
+.settings-dialog-content .form-group input[type="text"]:focus {
+  border-color: #1E88E5;
+  background-color: #fff;
+  box-shadow: 0 0 0 3px rgba(30, 136, 229, 0.2);
+} 

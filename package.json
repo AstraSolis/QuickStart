@@ -1,0 +1,103 @@
+{
+  "name": "quickstart",
+  "version": "1.0.0",
+  "description": "快速启动工具，支持文件和文件夹管理",
+  "main": "frontend/main.js",
+  "scripts": {
+    "start": "chcp 65001 && electron .",
+    "start-backend": "chcp 65001 && cd backend && python app.py",
+    "dev": "chcp 65001 && concurrently \"npm run start-backend\" \"npm run start\"",
+    "build": "node scripts/update-version.js && electron-builder",
+    "postinstall": "electron-builder install-app-deps",
+    "unified": "chcp 65001 && python start.py",
+    "start-safe": "chcp 65001 && cross-env NODE_ENV=production electron . --no-sandbox",
+    "dev-safe": "chcp 65001 && cross-env NODE_ENV=development electron . --no-sandbox",
+    "kill-python": "node scripts/kill-python.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "version": "node scripts/update-version.js",
+    "prebuild": "npm run version",
+    "release": "standard-version",
+    "release:minor": "standard-version --release-as minor",
+    "release:major": "standard-version --release-as major",
+    "release:patch": "standard-version --release-as patch",
+    "prepare": "husky install"
+  },
+  "build": {
+    "appId": "github.com.AstraSolis.QuickStart",
+    "productName": "QuickStart",
+    "directories": {
+      "output": "dist"
+    },
+    "extraResources": [
+      {
+        "from": "backend",
+        "to": "backend",
+        "filter": ["**/*", "!__pycache__", "!*.pyc"]
+      },
+      {
+        "from": "version.txt",
+        "to": "version.txt"
+      },
+      {
+        "from": "version.json",
+        "to": "version.json"
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "frontend/assets/img/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "QuickStart"
+    },
+    "extraFiles": [
+      {
+        "from": "pythonRuntime",
+        "to": "resources/python",
+        "filter": ["**/*"]
+      }
+    ]
+  },
+  "keywords": [
+    "quickstart",
+    "electron",
+    "python",
+    "file-manager",
+    "launcher"
+  ],
+  "author": "AstraSolis",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^0.24.0",
+    "electron-store": "^8.0.1"
+  },
+  "devDependencies": {
+    "concurrently": "^6.4.0",
+    "electron": "^16.0.5",
+    "electron-builder": "^22.14.5",
+    "standard-version": "^9.5.0"
+  },
+  "standard-version": {
+    "types": [
+      {"type": "feat", "section": "新功能"},
+      {"type": "fix", "section": "Bug修复"},
+      {"type": "chore", "hidden": true},
+      {"type": "docs", "section": "文档"},
+      {"type": "style", "section": "样式"},
+      {"type": "refactor", "section": "重构"},
+      {"type": "perf", "section": "性能优化"},
+      {"type": "test", "hidden": true}
+    ],
+    "bumpFiles": [
+      {
+        "filename": "package.json",
+        "type": "json"
+      }
+    ],
+    "header": "# 更新日志\n\n"
+  }
+} 
