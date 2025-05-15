@@ -119,22 +119,24 @@ git clone https://github.com/AstraSolis/QuickStart.git
 # Navigate to project directory
 cd QuickStart
 
-# Install frontend dependencies
-npm install
+# Use setup script (recommended)
+python setup.py
 
-# Install backend dependencies
+# Or manually install dependencies
+# Frontend dependencies
+npm install
+# Backend dependencies (ensure UTF-8 encoding)
 cd backend
-pip install -r requirements.txt
+pip install flask flask-cors pywin32 Pillow
 cd ..
 ```
+
+> **Note**: If you encounter installation issues, please refer to the [Setup Guide](./README_SETUP.md) for detailed solutions.
 
 #### Start Development Environment
 
 ```bash
-# Launch with encoding fix tool (recommended)
-python fix_encoding.py
-
-# Or use npm script
+# Use npm script
 npm run dev
 ```
 
