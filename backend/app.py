@@ -653,9 +653,9 @@ def get_version():
             pass
             
         response_data = {
-            "version": version,
-            "build_type": build_type
-        }
+                "version": version,
+                "build_type": build_type
+            }
         
         # 如果有完整的版本信息，添加到响应中
         if version_data:
