@@ -308,11 +308,16 @@ function createWindow() {
     },
     // 设置标题栏样式和背景色
     titleBarStyle: 'default',
-    backgroundColor: '#f5f6fa'
+    backgroundColor: '#f5f6fa',
+    // 禁用菜单栏
+    autoHideMenuBar: true
   });
 
   // 加载主页面
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
+  
+  // 隐藏菜单栏
+  mainWindow.setMenuBarVisibility(false);
   
   // 获取设置，判断是否显示托盘图标
   axios.get(`${API_BASE_URL}/settings`)
@@ -361,6 +366,10 @@ function createWindow() {
 
 // 创建应用程序菜单
 function createAppMenu() {
+  // 将应用菜单设置为null以彻底移除菜单栏
+  Menu.setApplicationMenu(null);
+  
+  // 其余的菜单创建代码保留，以便如果将来需要启用菜单可以轻松还原
   // 翻译函数，如果找不到翻译就返回原始文本
   const t = (key) => menuTranslations[key] || key;
   
