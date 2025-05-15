@@ -1,6 +1,6 @@
 {
   "name": "quickstart",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "快速启动工具，支持文件和文件夹管理",
   "main": "frontend/main.js",
   "scripts": {
@@ -32,7 +32,11 @@
       {
         "from": "backend",
         "to": "backend",
-        "filter": ["**/*", "!__pycache__", "!*.pyc"]
+        "filter": [
+          "**/*",
+          "!__pycache__",
+          "!*.pyc"
+        ]
       },
       {
         "from": "version.txt",
@@ -58,7 +62,9 @@
       {
         "from": "pythonRuntime",
         "to": "resources/python",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       }
     ]
   },
@@ -76,24 +82,48 @@
     "electron-store": "^8.0.1"
   },
   "devDependencies": {
+    "@commitlint/cli": "^17.6.5",
+    "@commitlint/config-conventional": "^17.6.5",
     "concurrently": "^6.4.0",
     "electron": "^16.0.5",
     "electron-builder": "^22.14.5",
-    "standard-version": "^9.5.0",
     "husky": "^8.0.3",
-    "@commitlint/cli": "^17.6.5",
-    "@commitlint/config-conventional": "^17.6.5"
+    "standard-version": "^9.5.0"
   },
   "standard-version": {
     "types": [
-      {"type": "feat", "section": "新功能"},
-      {"type": "fix", "section": "Bug修复"},
-      {"type": "chore", "hidden": true},
-      {"type": "docs", "section": "文档"},
-      {"type": "style", "section": "样式"},
-      {"type": "refactor", "section": "重构"},
-      {"type": "perf", "section": "性能优化"},
-      {"type": "test", "hidden": true}
+      {
+        "type": "feat",
+        "section": "新功能"
+      },
+      {
+        "type": "fix",
+        "section": "Bug修复"
+      },
+      {
+        "type": "chore",
+        "hidden": true
+      },
+      {
+        "type": "docs",
+        "section": "文档"
+      },
+      {
+        "type": "style",
+        "section": "样式"
+      },
+      {
+        "type": "refactor",
+        "section": "重构"
+      },
+      {
+        "type": "perf",
+        "section": "性能优化"
+      },
+      {
+        "type": "test",
+        "hidden": true
+      }
     ],
     "bumpFiles": [
       {
@@ -103,4 +133,4 @@
     ],
     "header": "# 更新日志\n\n"
   }
-} 
+}
