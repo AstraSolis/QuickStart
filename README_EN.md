@@ -43,7 +43,7 @@
     <p>The main interface shows the file list and operation buttons</p>
 </div>
 
-![Main Interface Example](image.png)
+![Main Interface Example](https://img.picui.cn/free/2025/05/15/6825828e6b7a7.png)
 
 ---
 
@@ -136,7 +136,10 @@ cd ..
 #### Start Development Environment
 
 ```bash
-# Use npm script
+# Use fix_encoding.py to resolve Chinese encoding issues
+python fix_encoding.py
+
+# Or use npm script
 npm run dev
 ```
 
@@ -184,37 +187,43 @@ npm run release:major
 ```
 quickstart/
 │
-├── backend/               # Python backend
-│   ├── app.py             # Flask application main entry
-│   ├── config_manager.py  # Configuration management
-│   ├── file_manager.py    # File operations
-│   ├── system_manager.py  # System integration
-│   ├── languages.py       # Language management
-│   └── requirements.txt   # Python dependencies
+├── backend/                # Python backend
+│   ├── app.py              # Flask application main entry
+│   ├── config_manager.py   # Configuration management
+│   ├── file_manager.py     # File operations
+│   ├── system_manager.py   # System integration
+│   ├── languages.py        # Language management
+│   ├── languages.json      # Language configuration file
+│   └── requirements.txt    # Python dependencies
 │
-├── frontend/              # Electron frontend
-│   ├── assets/            # Static resources
-│   │   ├── css/           # Style files
-│   │   ├── img/           # Image resources
-│   ├── index.html         # Main page
-│   ├── main.js            # Electron main process
-│   ├── renderer.js        # Rendering process
-│   └── styles.css         # Stylesheet
+├── frontend/               # Electron frontend
+│   ├── assets/             # Static resources
+│   ├── index.html          # Main page
+│   ├── main.js             # Electron main process
+│   ├── renderer.js         # Rendering process
+│   └── styles.css          # Stylesheet
 │
-├── scripts/               # Script tools
-│   ├── update-version.js  # Version information update tool
-│   └── kill-python.js     # Python process management tool
+├── scripts/                # Script tools
+│   ├── update-version.js   # Version information update tool
+│   ├── kill-python.js      # Python process management tool
+│   └── test-version-display.js # Version display test tool
 │
-├── .husky/                # Git hooks configuration
-├── CHANGELOG.md           # Change log
-├── COMMIT_CONVENTION.md   # Commit convention guide
-├── commitlint.config.js   # Commit lint configuration
-├── version.json           # Detailed version information
-├── version.txt            # Simplified version number
-├── package.json           # Project configuration
-├── fix_encoding.py        # Encoding fix tool
-├── README.md              # Chinese documentation
-└── README_EN.md           # English documentation
+├── .husky/                 # Git hooks configuration
+├── CHANGELOG.md            # Change log
+├── COMMIT_CONVENTION.md    # Commit convention guide
+├── commitlint.config.js    # Commit lint configuration
+├── version.json            # Detailed version information
+├── version.txt             # Simplified version number
+├── package.json            # Project configuration
+├── package-lock.json       # NPM dependencies lock
+├── setup.py                # Setup script
+├── fix_encoding.py         # Encoding fix tool
+├── languages.json          # Global language configuration
+├── .gitignore              # Git ignore configuration
+├── LICENSE                 # License
+├── README.md               # Chinese documentation
+├── README_EN.md            # English documentation
+└── README_SETUP.md         # Setup guide
 ```
 
 ---

@@ -43,7 +43,7 @@
     <p>主界面展示了文件列表和操作按钮</p>
 </div>
 
-![主界面示例图](image.png)
+![主界面示例图](https://img.picui.cn/free/2025/05/15/6825828e6b7a7.png)
 
 ---
 
@@ -136,7 +136,10 @@ cd ..
 #### 启动开发环境
 
 ```bash
-# 使用npm脚本启动
+# 使用fix_encoding.py解决中文编码问题后启动
+python fix_encoding.py
+
+# 或者使用npm脚本启动
 npm run dev
 ```
 
@@ -184,37 +187,43 @@ npm run release:major
 ```
 quickstart/
 │
-├── backend/               # Python后端
-│   ├── app.py             # Flask应用主入口
-│   ├── config_manager.py  # 配置管理
-│   ├── file_manager.py    # 文件操作
-│   ├── system_manager.py  # 系统集成
-│   ├── languages.py       # 语言管理
-│   └── requirements.txt   # Python依赖
+├── backend/                # Python后端
+│   ├── app.py              # Flask应用主入口
+│   ├── config_manager.py   # 配置管理
+│   ├── file_manager.py     # 文件操作
+│   ├── system_manager.py   # 系统集成
+│   ├── languages.py        # 语言管理
+│   ├── languages.json      # 语言配置文件
+│   └── requirements.txt    # Python依赖
 │
-├── frontend/              # Electron前端
-│   ├── assets/            # 静态资源
-│   │   ├── css/           # 样式文件
-│   │   ├── img/           # 图片资源
-│   ├── index.html         # 主页面
-│   ├── main.js            # Electron主进程
-│   ├── renderer.js        # 渲染进程
-│   └── styles.css         # 样式表
+├── frontend/               # Electron前端
+│   ├── assets/             # 静态资源
+│   ├── index.html          # 主页面
+│   ├── main.js             # Electron主进程
+│   ├── renderer.js         # 渲染进程
+│   └── styles.css          # 样式表
 │
-├── scripts/               # 脚本工具
-│   ├── update-version.js  # 版本信息更新工具
-│   └── kill-python.js     # Python进程管理工具
+├── scripts/                # 脚本工具
+│   ├── update-version.js   # 版本信息更新工具
+│   ├── kill-python.js      # Python进程管理工具
+│   └── test-version-display.js # 版本显示测试工具
 │
-├── .husky/                # Git钩子配置
-├── CHANGELOG.md           # 更新日志
-├── COMMIT_CONVENTION.md   # 提交规范说明
-├── commitlint.config.js   # 提交规范配置
-├── version.json           # 详细版本信息
-├── version.txt            # 简化版本号
-├── package.json           # 项目配置
-├── fix_encoding.py        # 编码修复工具
-├── README.md              # 中文项目说明
-└── README_EN.md           # 英文项目说明
+├── .husky/                 # Git钩子配置
+├── CHANGELOG.md            # 更新日志
+├── COMMIT_CONVENTION.md    # 提交规范说明
+├── commitlint.config.js    # 提交规范配置
+├── version.json            # 详细版本信息
+├── version.txt             # 简化版本号
+├── package.json            # 项目配置
+├── package-lock.json       # NPM依赖锁定
+├── setup.py                # 安装脚本
+├── fix_encoding.py         # 编码修复工具
+├── languages.json          # 全局语言配置
+├── .gitignore              # Git忽略配置
+├── LICENSE                 # 开源许可证
+├── README.md               # 中文项目说明
+├── README_EN.md            # 英文项目说明
+└── README_SETUP.md         # 安装指南
 ```
 
 ---
