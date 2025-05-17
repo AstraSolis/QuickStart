@@ -24,8 +24,18 @@ let retryCount = 0;
 const MAX_RETRIES = 5;
 // 菜单翻译
 let menuTranslations = {};
-// 全局设置
-let settings = { language: "中文" };
+// 全局设置 (增加默认值以确保基本功能可用)
+let settings = { 
+  language: "中文",
+  minimize_to_tray: false  // 默认不启用最小化到托盘，将在加载设置时更新
+};
+
+// 应用状态管理标志
+const appState = {
+  isQuitting: false,    // 应用是否正在退出
+  settingsLoaded: false, // 设置是否已加载
+  trayItemsLoaded: false // 托盘项目是否已加载
+};
 
 // 缓存图标路径，避免重复生成
 const iconCache = new Map();
@@ -119,6 +129,9 @@ if (!gotTheLock) {
   app.whenReady().then(() => {
     // 设置应用ID
     app.setAppUserModelId('github.com/AstraSolis/QuickStart');
+    
+    // 每次启动应用时重置isQuitting标志
+    app.isQuitting = false;
     
     // 启动Python后端服务
     startPythonServer();
@@ -261,6 +274,11 @@ function startPythonServer() {
 
 // 等待Python服务器启动
 function waitForPythonServer() {
+  // 在启动过程中明确将isQuitting标志设置为false
+  log('服务启动，显式重置app.isQuitting标志');
+  app.isQuitting = false;
+  appState.isQuitting = false;  // 同时确保appState中的标志也为false
+  
   setTimeout(() => {
     axios.get(`${API_BASE_URL}/health`)
       .then(() => {
@@ -319,48 +337,99 @@ function createWindow() {
   // 隐藏菜单栏
   mainWindow.setMenuBarVisibility(false);
   
-  // 获取设置，判断是否显示托盘图标
-  axios.get(`${API_BASE_URL}/settings`)
-    .then(response => {
-      // 更新全局settings变量
-      settings = response.data.data || { language: "中文" };
-      const language = settings.language || "中文";
-      
-      log(`当前语言: ${language}`);
-      
-      // 获取当前语言的翻译
-      axios.get(`${API_BASE_URL}/translations/${encodeURIComponent(language)}`)
-        .then(translationRes => {
-          menuTranslations = translationRes.data.data || {};
-          
-          log('菜单翻译加载成功:', Object.keys(menuTranslations).length);
-          
-          // 创建应用程序菜单
-          createAppMenu();
-          
-          // 处理最小化到托盘设置
-          log(`设置最小化到托盘: ${settings.minimize_to_tray}`);
-          handleMinimizeToTray(settings.minimize_to_tray);
-        })
-        .catch(err => {
-          log('Failed to get translations:', err);
-          // 出错时使用默认中文菜单
-          menuTranslations = {};
-          createAppMenu();
-          
-          // 处理最小化到托盘设置
-          handleMinimizeToTray(settings.minimize_to_tray);
-        });
-    })
-    .catch(err => {
-      log('Failed to get settings:', err);
-      // 出错时不创建托盘图标，改为使用默认设置
-      handleMinimizeToTray(false);
-    });
+  // 添加同步检查和重试机制，确保设置被正确加载和应用
+  let settingsRetryCount = 0;
+  const MAX_SETTINGS_RETRIES = 3;
+  
+  function loadAndApplySettings() {
+    log('获取设置并应用最小化到托盘功能...');
+    
+    // 获取设置，判断是否显示托盘图标
+    axios.get(`${API_BASE_URL}/settings`)
+      .then(response => {
+        // 更新全局settings变量，确保保留默认值
+        const newSettings = response.data.data || {};
+        
+        // 合并设置，保留默认值的同时更新服务器返回的值
+        settings = {
+          ...settings,  // 保持默认值
+          ...newSettings  // 应用服务器返回的设置
+        };
+        
+        // 确保minimize_to_tray是布尔值
+        if (typeof settings.minimize_to_tray !== 'boolean') {
+          // 将非布尔值转换为布尔值（例如 "true" 字符串转为 true）
+          settings.minimize_to_tray = settings.minimize_to_tray === true || settings.minimize_to_tray === "true";
+        }
+        
+        log(`加载设置成功，minimize_to_tray=${settings.minimize_to_tray}，类型：${typeof settings.minimize_to_tray}`);
+        
+        // 标记设置已加载
+        appState.settingsLoaded = true;
+        
+        // 如果设置为最小化到托盘，确保加载托盘项目
+        if (settings.minimize_to_tray) {
+          loadTrayItems();
+        }
+        
+        const language = settings.language || "中文";
+        log(`当前语言: ${language}`);
+        
+        // 获取当前语言的翻译
+        axios.get(`${API_BASE_URL}/translations/${encodeURIComponent(language)}`)
+          .then(translationRes => {
+            menuTranslations = translationRes.data.data || {};
+            
+            log('菜单翻译加载成功:', Object.keys(menuTranslations).length);
+            
+            // 创建应用程序菜单
+            createAppMenu();
+            
+            // 明确地应用最小化到托盘设置
+            log(`加载后立即设置最小化到托盘: ${settings.minimize_to_tray}`);
+            handleMinimizeToTray(settings.minimize_to_tray);
+          })
+          .catch(err => {
+            log('Failed to get translations:', err);
+            // 出错时使用默认中文菜单
+            menuTranslations = {};
+            createAppMenu();
+            
+            // 即使翻译加载失败，仍然应用最小化到托盘设置
+            log(`加载翻译失败，但仍然设置最小化到托盘: ${settings.minimize_to_tray}`);
+            handleMinimizeToTray(settings.minimize_to_tray);
+          });
+      })
+      .catch(err => {
+        log('Failed to get settings:', err);
+        
+        // 尝试重试几次加载设置
+        settingsRetryCount++;
+        if (settingsRetryCount < MAX_SETTINGS_RETRIES) {
+          log(`获取设置失败，${settingsRetryCount}/${MAX_SETTINGS_RETRIES} 次重试...`);
+          setTimeout(loadAndApplySettings, 1000);
+          return;
+        }
+        
+        // 出错时默认不启用最小化到托盘
+        log('获取设置失败，使用默认设置，不启用最小化到托盘');
+        handleMinimizeToTray(false);
+      });
+  }
+  
+  // 立即调用设置加载和应用
+  loadAndApplySettings();
 
   // 设置窗口关闭事件
   mainWindow.on('closed', () => {
+    // 当窗口关闭时，将其引用置为null
     mainWindow = null;
+    // 确保在应用下次启动时isQuitting被正确重置
+    if (!app.isQuitting) {
+      log('窗口被关闭，但不是通过退出应用操作，重置isQuitting标志');
+      app.isQuitting = false;
+      appState.isQuitting = false;  // 同时重置appState中的标志
+    }
   });
 }
 
@@ -406,10 +475,7 @@ function createAppMenu() {
         {
           role: 'quit',
           label: t('exit') || '退出',
-          click: () => {
-            app.isQuitting = true;
-            app.quit();
-          }
+          click: () => quitApplication()
         }
       ]
     },
@@ -556,9 +622,15 @@ function createAppMenu() {
   }
 }
 
-// 创建系统托盘图标
+  // 创建系统托盘图标
 function createTray(iconPath) {
   try {
+    // 如果应用正在退出，不创建托盘图标
+    if (appState.isQuitting) {
+      log('应用正在退出，不创建托盘图标');
+      return;
+    }
+    
     // 如果已存在托盘图标，先删除
     if (trayIcon) {
       trayIcon.destroy();
@@ -582,6 +654,9 @@ function createTray(iconPath) {
       return;
     }
     
+    // 确保应用不是处于退出状态
+    appState.isQuitting = false;
+    
     // 输出更详细的信息用于调试
     log(`尝试创建托盘图标，使用图标: ${iconPath}`);
     log(`图标文件大小: ${fs.statSync(iconPath).size} 字节`);
@@ -602,7 +677,29 @@ function createTray(iconPath) {
       
       trayIcon.setToolTip('QuickStart');
       
-      // 更新托盘菜单
+      // 立即设置一个基本菜单，确保右键始终可用
+      const basicMenu = Menu.buildFromTemplate([
+        { 
+          label: '显示主窗口', 
+          click: () => {
+            if (mainWindow) {
+              mainWindow.show();
+              if (mainWindow.isMinimized()) mainWindow.restore();
+              mainWindow.focus();
+            } else {
+              createWindow();
+            }
+          } 
+        },
+        { type: 'separator' },
+        { 
+          label: '退出', 
+          click: () => quitApplication()
+        }
+      ]);
+      trayIcon.setContextMenu(basicMenu);
+      
+      // 然后异步更新完整的托盘菜单
       refreshTrayMenu();
       
       // 点击托盘图标时切换窗口显示状态
@@ -734,12 +831,15 @@ async function getTrayItemIcon(filePath) {
   }
 }
 
-// 构建托盘菜单
+  // 构建托盘菜单
 function buildTrayMenu(trayItems, translations) {
   if (!trayIcon) {
     log('托盘图标不存在，无法构建菜单');
     return;
   }
+  
+  // Electron的Tray对象没有getContextMenu方法
+  // 我们不需要检查是否存在上下文菜单，直接为其构建菜单即可
   
   // 翻译辅助函数
   const t = (key) => {
@@ -1003,10 +1103,7 @@ function buildTrayMenu(trayItems, translations) {
         // 添加退出选项
         menuItems.push({
           label: t('exit') || '退出',
-          click: () => {
-            app.isQuitting = true;
-            app.quit();
-          }
+          click: () => quitApplication()
         });
         
         // 构建最终菜单
@@ -1028,10 +1125,7 @@ function buildTrayMenu(trayItems, translations) {
           { type: 'separator' },
           {
             label: t('exit') || '退出',
-            click: () => {
-              app.isQuitting = true;
-              app.quit();
-            }
+            click: () => quitApplication()
           }
         ]);
         
@@ -1051,10 +1145,7 @@ function buildTrayMenu(trayItems, translations) {
       { type: 'separator' },
       {
         label: t('exit') || '退出',
-        click: () => {
-          app.isQuitting = true;
-          app.quit();
-        }
+        click: () => quitApplication()
       }
     ]);
     
@@ -1192,6 +1283,12 @@ function tryOpenWithChildProcess(filePath, params = '') {
 function handleMinimizeToTray(minimize) {
   log(`设置最小化到托盘: ${minimize}`);
   
+  // 确保退出状态正确
+  if (!appState.isQuitting) {
+    appState.isQuitting = false;
+    app.isQuitting = false;  // 同时确保app.isQuitting也为false
+  }
+  
   // 如果已存在窗口，设置其关闭行为
   if (mainWindow) {
     // 移除所有已有的close事件监听器，避免重复添加
@@ -1199,18 +1296,38 @@ function handleMinimizeToTray(minimize) {
     
     // 添加新的close事件监听器
     mainWindow.on('close', (event) => {
-      log(`窗口关闭事件触发，app.isQuitting=${app.isQuitting}, minimize=${minimize}`);
+      // 明确转换为布尔值，避免字符串等类型问题
+      const shouldMinimize = minimize === true;
+      const settingsEnabled = settings && settings.minimize_to_tray === true;
       
-      if (!app.isQuitting && minimize) {
+      log(`窗口关闭事件触发，appState.isQuitting=${appState.isQuitting}, app.isQuitting=${app.isQuitting}, settingsEnabled=${settingsEnabled}, minimize=${minimize}`);
+      
+      // 确保设置值是正确的，防止意外情况
+      log(`检查minimize_to_tray当前设置状态: ${settings.minimize_to_tray}, 类型: ${typeof settings.minimize_to_tray}`);
+      
+      // 如果明确设置要退出，不拦截关闭事件
+      // 同时检查两个退出标志，确保一致性
+      if (appState.isQuitting || app.isQuitting) {
+        log('应用正在退出，允许窗口关闭');
+        return true;
+      }
+      
+      // 如果设置了最小化到托盘，拦截关闭事件
+      if (shouldMinimize && settingsEnabled) {
         event.preventDefault();
         log('阻止窗口关闭，改为隐藏窗口');
         mainWindow.hide();
         
-        // 确保托盘图标存在
+        // 只在关闭窗口且设置了"最小化到系统托盘"时创建托盘图标
         if (!trayIcon) {
           log('托盘图标不存在，尝试创建');
-          const iconPath = getTrayIconPath();  // 使用新的托盘图标路径函数
+          const iconPath = getTrayIconPath();
           createTray(iconPath);
+          
+          // 确保托盘项目已加载
+          if (!appState.trayItemsLoaded) {
+            loadTrayItems();
+          }
         }
         
         return false;
@@ -1218,17 +1335,18 @@ function handleMinimizeToTray(minimize) {
       
       log('允许窗口关闭');
       // 确保退出时清理资源
+      appState.isQuitting = true;
       app.isQuitting = true;
       
-      // 如果存在系统托盘，销毁它
-      if (trayIcon) {
+      // 如果设置了不需要最小化到托盘或明确指定退出，销毁托盘图标
+      if (trayIcon && (!settings.minimize_to_tray || appState.isQuitting)) {
         log('销毁托盘图标');
         trayIcon.destroy();
         trayIcon = null;
       }
       
-      // 终止Python服务器进程
-      if (pyProc) {
+      // 在明确退出时才终止Python服务器进程
+      if (pyProc && appState.isQuitting) {
         try {
           log('正在终止Python进程...');
           // 强制杀死进程及其子进程
@@ -1260,8 +1378,11 @@ function handleMinimizeToTray(minimize) {
         event.preventDefault();
         mainWindow.hide();
         
-        // 确保托盘图标存在
-        if (!trayIcon) {
+        // 确保settings存在，并检查设置是否明确启用了最小化到托盘
+        const enableMinToTray = settings && settings.minimize_to_tray === true;
+        
+        // 只有在设置了最小化到系统托盘且托盘图标不存在时才创建托盘图标
+        if (!trayIcon && enableMinToTray) {
           log('最小化时创建托盘图标');
           const iconPath = getTrayIconPath();
           createTray(iconPath);
@@ -1296,47 +1417,62 @@ function restartPythonServer() {
   }, 1000);
 }
 
-// 监听IPC消息：应用关闭
-ipcMain.on('app-closing', () => {
-  log('应用关闭中，准备清理资源...');
+// 添加一个全局的退出函数，确保所有清理工作都正确执行
+function quitApplication(skipAppQuit = false) {
+  log('执行应用退出流程');
+  
+  // 设置退出标志
+  appState.isQuitting = true;
   app.isQuitting = true;
   
-  // 保存当前Python进程PID
-  let pythonPid = pyProc ? pyProc.pid : null;
-  
-  // 立即执行终止脚本
-  try {
-    const scriptPath = path.join(__dirname, '..', 'scripts', 'kill-python.js');
-    
-    // 确保脚本文件存在
-    if (fs.existsSync(scriptPath)) {
-      // 如果有PID，将其作为参数传递
-      const args = pythonPid ? [scriptPath, pythonPid.toString()] : [scriptPath];
-      
-      // 使用独立进程执行脚本，不等待其完成
-      const cleanupProcess = spawn('node', args, {
-        detached: true,
-        stdio: 'ignore',
-        windowsHide: true
-      });
-      
-      // 让清理进程独立运行，即使主进程退出
-      cleanupProcess.unref();
-      
-      log('已启动进程清理脚本');
-    } else {
-      log(`清理脚本不存在: ${scriptPath}`);
-    }
-  } catch (error) {
-    log('启动清理脚本失败:', error);
+  // 确保销毁托盘图标
+  if (trayIcon) {
+    log('退出应用，销毁托盘图标');
+    trayIcon.destroy();
+    trayIcon = null;
   }
   
-  // 防止长时间无法退出
-  log('设置强制退出定时器...');
+  // 终止Python服务器进程
+  if (pyProc) {
+    try {
+      log('正在终止Python进程...');
+      // 强制杀死进程及其子进程
+      if (process.platform === 'win32') {
+        const { spawn } = require('child_process');
+        // 使用同步方式确保在应用退出前完成
+        spawn('taskkill', ['/pid', pyProc.pid, '/f', '/t'], {
+          detached: true,
+          stdio: 'ignore'
+        }).unref();
+        
+        log(`已发送taskkill命令终止进程(PID: ${pyProc.pid})`);
+      } else {
+        // 非Windows平台使用SIGKILL信号
+        pyProc.kill('SIGKILL');
+      }
+    } catch (error) {
+      log('终止Python进程失败:', error);
+    }
+    pyProc = null;
+  }
+  
+  // 确保在指定时间后强制退出应用
   setTimeout(() => {
-    log('强制退出应用');
-    process.exit(0); // 直接终止Node进程，比app.exit()更强力
-  }, 1500);
+    log('确保应用退出');
+    process.exit(0);
+  }, 1000);
+  
+  // 如果没有指定跳过，则立即退出应用
+  if (!skipAppQuit) {
+    log('调用app.quit()');
+    app.quit();
+  }
+}
+
+// 监听IPC消息：应用关闭 - 使用统一的退出函数
+ipcMain.on('app-closing', () => {
+  log('应用关闭中，准备清理资源...');
+  quitApplication();
 });
 
 // 监听渲染进程发来的消息
@@ -1363,18 +1499,40 @@ ipcMain.on('settings-updated', (event, newSettings) => {
   // 保存旧设置中的minimize_to_tray状态
   const oldMinimizeToTray = settings ? settings.minimize_to_tray : false;
   
+  // 确保新设置不为空
+  if (!newSettings) {
+    log('收到空设置，使用当前设置');
+    newSettings = settings || { language: "中文" };
+  }
+  
+  // 确保minimize_to_tray属性是布尔值
+  if (typeof newSettings.minimize_to_tray !== 'boolean') {
+    newSettings.minimize_to_tray = newSettings.minimize_to_tray === true || newSettings.minimize_to_tray === "true";
+  }
+  
   // 更新设置
-  settings = newSettings || settings;
+  settings = {
+    ...settings,  // 保留默认值
+    ...newSettings  // 应用新设置
+  };
   
   // 检查最小化到托盘设置是否变化
   const minimizeToTrayChanged = oldMinimizeToTray !== settings.minimize_to_tray;
   
   if (minimizeToTrayChanged) {
     log(`最小化到托盘设置改变: ${oldMinimizeToTray} -> ${settings.minimize_to_tray}`);
+    // 重置应用退出标志，确保下次窗口关闭时正确处理
+    app.isQuitting = false;
   }
   
   // 更新最小化到托盘设置
-  if (settings.minimize_to_tray) {
+  // 明确确保settings.minimize_to_tray是布尔类型 true
+  const enableTrayMinimize = settings && settings.minimize_to_tray === true;
+  
+  // 记录当前状态用于调试
+  log(`更新最小化到托盘设置，当前设置值: ${enableTrayMinimize}，原始值类型: ${typeof settings.minimize_to_tray}`);
+  
+  if (enableTrayMinimize) {
     // 启用最小化到托盘
     log('启用最小化到托盘功能');
     
@@ -1386,15 +1544,19 @@ ipcMain.on('settings-updated', (event, newSettings) => {
       mainWindow.on('minimize', (event) => {
         event.preventDefault();
         mainWindow.hide();
-        // 确保托盘图标存在
+        
+        // 确保图标存在
         if (!trayIcon) {
           const trayIconPath = getTrayIconPath();
+          log('最小化时创建托盘图标');
           createTray(trayIconPath);
         }
       });
     }
     
-    // 更新窗口关闭事件处理
+    // 更新窗口关闭事件处理为启用状态，此处传入true
+    log('启用关闭窗口时最小化到托盘');
+    app.isQuitting = false; // 重要：确保isQuitting被正确重置
     handleMinimizeToTray(true);
   } else {
     // 禁用最小化到托盘
@@ -1405,10 +1567,11 @@ ipcMain.on('settings-updated', (event, newSettings) => {
       mainWindow.removeAllListeners('minimize');
     }
     
-    // 更新窗口关闭事件处理
+    // 更新窗口关闭事件处理为禁用状态，此处传入false
+    log('禁用关闭窗口时最小化到托盘');
     handleMinimizeToTray(false);
     
-    // 如果托盘图标存在且不需要最小化到托盘，销毁托盘图标
+    // 如果托盘图标存在且不是退出状态，销毁它
     if (trayIcon && !app.isQuitting) {
       log('销毁不必要的托盘图标');
       trayIcon.destroy();
@@ -1518,45 +1681,42 @@ ipcMain.handle('open-external-link', async (event, url) => {
 // 监听IPC消息：更新最小化到托盘设置
 ipcMain.on('update-minimize-setting', (event, minimizeToTray) => {
   log(`立即更新最小化到托盘设置: ${minimizeToTray}`);
+  
+  // 转换为布尔值并更新全局设置
+  const enableMinimize = minimizeToTray === true;
+  
+  // 更新内存中的设置
+  if (settings) {
+    settings.minimize_to_tray = enableMinimize;
+  }
+  
+  // 重置应用退出标志，确保下次窗口关闭时正确处理
+  appState.isQuitting = false;
+  app.isQuitting = false;
+  
+  // 确保更新同步到后端，以便持久化保存
+  axios.put(`${API_BASE_URL}/settings`, { minimize_to_tray: enableMinimize })
+    .then(response => {
+      log(`最小化到托盘设置已同步到后端: ${enableMinimize}`);
+    })
+    .catch(error => {
+      log(`同步最小化到托盘设置到后端失败: ${error.message}`);
+    });
+  
+  // 如果启用了最小化到托盘，确保加载托盘项目
+  if (enableMinimize && !appState.trayItemsLoaded) {
+    loadTrayItems();
+  }
+  
   // 立即应用新设置
-  handleMinimizeToTray(minimizeToTray);
+  handleMinimizeToTray(enableMinimize);
 });
 
 // 确保在应用退出前清理资源
 app.on('will-quit', (event) => {
-  // 标记应用正在退出
-  app.isQuitting = true;
-  
-  // 确保销毁托盘图标
-  if (trayIcon) {
-    log('应用退出，销毁托盘图标');
-    trayIcon.destroy();
-    trayIcon = null;
-  }
-  
-  // 终止Python服务器进程
-  if (pyProc) {
-    try {
-      log('正在终止Python进程...');
-      // 强制杀死进程及其子进程
-      if (process.platform === 'win32') {
-        const { spawn } = require('child_process');
-        // 使用同步方式确保在应用退出前完成
-        spawn('taskkill', ['/pid', pyProc.pid, '/f', '/t'], {
-          detached: true,
-          stdio: 'ignore'
-        }).unref();
-        
-        log(`已发送taskkill命令终止进程(PID: ${pyProc.pid})`);
-      } else {
-        // 非Windows平台使用SIGKILL信号
-        pyProc.kill('SIGKILL');
-      }
-    } catch (error) {
-      log('终止Python进程失败:', error);
-    }
-    pyProc = null;
-  }
+  log('应用即将退出');
+  // 传入 true 表示跳过调用 app.quit()，因为这是在 will-quit 事件中
+  quitApplication(true);
 });
 
 // 处理macOS特性：点击dock图标时重新创建窗口
@@ -1571,43 +1731,8 @@ app.on('window-all-closed', () => {
   // 在macOS上，除非用户按下 Cmd + Q 显式退出
   // 否则应用及菜单栏会保持活跃状态
   if (process.platform !== 'darwin') {
-    app.isQuitting = true;
-    
-    // 确保销毁托盘图标
-    if (trayIcon) {
-      log('所有窗口关闭，销毁托盘图标');
-      trayIcon.destroy();
-      trayIcon = null;
-    }
-    
-    // 确保关闭Python进程
-    if (pyProc) {
-      try {
-        log('正在终止Python进程...');
-        // 强制杀死进程及其子进程
-        if (process.platform === 'win32') {
-          const { spawn } = require('child_process');
-          // 使用同步方式确保在应用退出前完成
-          spawn('taskkill', ['/pid', pyProc.pid, '/f', '/t'], {
-            detached: true,
-            stdio: 'ignore'
-          }).unref();
-          
-          log(`已发送taskkill命令终止进程(PID: ${pyProc.pid})`);
-        } else {
-          // 非Windows平台使用SIGKILL信号
-          pyProc.kill('SIGKILL');
-        }
-      } catch (error) {
-        log('终止Python进程失败:', error);
-      }
-      pyProc = null;
-    }
-    
-    // 延迟退出以确保进程被终止
-    setTimeout(() => {
-      app.exit(0);
-    }, 1000);
+    // 使用统一的退出函数
+    quitApplication();
   }
 });
 
@@ -1698,6 +1823,14 @@ app.on('ready', async () => {
   // 设置表示尚未完全准备好
   app.appReady = false;
   
+  // 初始化应用状态
+  appState.isQuitting = false;
+  app.isQuitting = false;  // 确保两个标志保持一致
+  appState.settingsLoaded = false;
+  appState.trayItemsLoaded = false;
+  
+  log('应用启动: 重置所有状态标志');
+  
   // 尝试启动Python后端服务器
   try {
     await startPythonServer();
@@ -1766,4 +1899,47 @@ function updateTrayMenu() {
       reject(err);
     });
   });
+}
+
+// 加载托盘项目函数
+function loadTrayItems() {
+  log('开始加载托盘项目...');
+  
+  // 如果托盘图标不存在且设置允许最小化到托盘，创建托盘图标
+  if (!trayIcon && settings.minimize_to_tray) {
+    const iconPath = getTrayIconPath();
+    log('基于设置创建托盘图标');
+    createTray(iconPath);
+  }
+  
+  // 无论托盘图标是否存在，都尝试获取托盘项目
+  axios.get(`${API_BASE_URL}/tray`)
+    .then(response => {
+      const trayItems = response.data.data || [];
+      log(`成功加载 ${trayItems.length} 个托盘项目`);
+      
+      // 标记托盘项目已加载
+      appState.trayItemsLoaded = true;
+      
+      // 如果托盘图标存在，更新托盘菜单
+      if (trayIcon) {
+        // 获取当前语言的翻译
+        const language = settings?.language || "中文";
+        axios.get(`${API_BASE_URL}/translations/${encodeURIComponent(language)}`)
+          .then(translationResponse => {
+            const translations = translationResponse.data.data || {};
+            buildTrayMenu(trayItems, translations);
+            log('已使用加载的托盘项目更新托盘菜单');
+          })
+          .catch(error => {
+            log('获取翻译出错:', error);
+            // 即使翻译获取失败，仍使用加载的托盘项目构建菜单
+            buildTrayMenu(trayItems, {});
+          });
+      }
+    })
+    .catch(error => {
+      log('加载托盘项目失败:', error);
+      appState.trayItemsLoaded = false;
+    });
 } 
