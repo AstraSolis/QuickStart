@@ -1,8 +1,5 @@
 // 导入所需模块
-const { ipcRenderer } = require('electron');
-const axios = require('axios');
-const os = require('os');
-const path = require('path');
+// const ipcRenderer = window.electronAPI.ipcRenderer;
 
 // API基础URL
 const API_BASE_URL = 'http://localhost:5000/api';
@@ -57,6 +54,9 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // 绑定事件处理程序
   bindEvents();
+  
+  // 统一外链点击事件
+  bindExternalLinks();
 });
 
 // 在window的load事件中标记页面已完全加载
@@ -75,7 +75,7 @@ window.addEventListener('load', () => {
 });
 
 // 监听来自主进程的刷新请求
-ipcRenderer.on('refresh-main-window', () => {
+window.electronAPI.ipcOn('refresh-main-window', () => {
   console.log('收到主进程刷新请求，重新加载页面');
   
   // 检查是否是应用程序初始加载阶段
@@ -113,12 +113,12 @@ window.addEventListener('beforeunload', (event) => {
     isClosing = true;
     console.log('发送应用关闭通知到主进程');
     // 通知主进程应用将要关闭
-    ipcRenderer.send('app-closing');
+    window.electronAPI.ipcSend('app-closing');
   }
 });
 
 // 监听托盘更新事件
-ipcRenderer.on('tray-updated', () => {
+window.electronAPI.ipcOn('tray-updated', () => {
   // 刷新托盘项目列表
   fetchTrayItems();
 });
@@ -158,6 +158,8 @@ function cacheDOM() {
     // 设置选项卡
     settingsTabs: document.querySelectorAll('.tab-button'),
     settingsTabContents: document.querySelectorAll('.tab-content'),
+    checkUpdateBtn: document.getElementById('check-update-btn'),
+    versionText: document.getElementById('version-text'),
   };
 }
 
@@ -241,10 +243,10 @@ function bindEvents() {
   document.addEventListener('keydown', handleKeyDown);
   
   // 监听来自主进程的菜单事件
-  ipcRenderer.on('menu-add-file', openAddFileDialog);
-  ipcRenderer.on('menu-delete', handleDeleteSelected);
-  ipcRenderer.on('menu-refresh', loadFileList);
-  ipcRenderer.on('menu-settings', openSettingsDialog);
+  window.electronAPI.ipcOn('menu-add-file', openAddFileDialog);
+  window.electronAPI.ipcOn('menu-delete', handleDeleteSelected);
+  window.electronAPI.ipcOn('menu-refresh', loadFileList);
+  window.electronAPI.ipcOn('menu-settings', openSettingsDialog);
   
   // 添加项目地址链接点击事件，确保在默认浏览器中打开
   const projectLink = document.querySelector('.version-info a');
@@ -252,7 +254,7 @@ function bindEvents() {
     projectLink.addEventListener('click', (event) => {
       event.preventDefault();
       // 使用IPC调用打开外部链接
-      ipcRenderer.invoke('open-external-link', projectLink.href)
+      window.electronAPI.ipcInvoke('open-external-link', projectLink.href)
         .catch(err => {
           console.error('Failed to open external link:', err);
           // 如果IPC调用失败，回退到默认行为
@@ -274,6 +276,9 @@ function bindEvents() {
   
   // 文件列表容器的点击事件，用于处理在空白处点击取消选择
   DOM.fileList.parentElement.addEventListener('click', handleContainerClick);
+
+  // 初始化检查更新按钮
+  initCheckUpdateButton();
 }
 
 // 加载设置
@@ -404,7 +409,7 @@ function loadTranslations(language) {
       updateUIText(translations);
       
       // 立即通知主进程更新托盘菜单翻译
-      ipcRenderer.send('language-changed', language);
+      window.electronAPI.ipcSend('language-changed', language);
       
       // 延迟重置标志，确保所有操作完成后才允许下一次语言切换
       setTimeout(() => {
@@ -429,32 +434,45 @@ function updateUIText(translations) {
   document.title = t('title');
   
   // 更新按钮文本
-  DOM.addFileBtn.textContent = t('add_file');
-  DOM.addFileBtn.title = `${t('open_multiple_files')}\n${t('support_drag_drop')}`;
-  DOM.settingsBtn.textContent = t('settings');
-  DOM.settingsSaveBtn.textContent = t('confirm');
-  DOM.settingsCancelBtn.textContent = t('cancel');
-  DOM.addFileCancelBtn.textContent = t('cancel');
+  if (DOM.addFileBtn) DOM.addFileBtn.textContent = t('add_file');
+  if (DOM.addFileBtn) DOM.addFileBtn.title = `${t('open_multiple_files')}
+${t('support_drag_drop')}`;
+  if (DOM.settingsBtn) DOM.settingsBtn.textContent = t('settings');
+  if (DOM.settingsSaveBtn) DOM.settingsSaveBtn.textContent = t('confirm');
+  if (DOM.settingsCancelBtn) DOM.settingsCancelBtn.textContent = t('cancel');
+  if (DOM.addFileCancelBtn) DOM.addFileCancelBtn.textContent = t('cancel');
   
   // 更新对话框文本
-  document.querySelector('#add-file-title').textContent = t('select_file_or_folder') || '选择操作';
-  document.querySelector('#select-file-btn .file-type-text').textContent = t('select_file') || '添加文件';
-  document.querySelector('#select-folder-btn .file-type-text').textContent = t('select_folder') || '添加文件夹';
+  const addFileTitle = document.querySelector('#add-file-title');
+  if (addFileTitle) addFileTitle.textContent = t('select_file_or_folder') || '选择操作';
+  const selectFileBtnText = document.querySelector('#select-file-btn .file-type-text');
+  if (selectFileBtnText) selectFileBtnText.textContent = t('select_file') || '添加文件';
+  const selectFolderBtnText = document.querySelector('#select-folder-btn .file-type-text');
+  if (selectFolderBtnText) selectFolderBtnText.textContent = t('select_folder') || '添加文件夹';
   
   // 更新设置对话框文本
-  document.querySelector('#settings-title').textContent = t('settings');
+  const settingsTitle = document.querySelector('#settings-title');
+  if (settingsTitle) settingsTitle.textContent = t('settings');
   
   // 更新设置选项卡按钮
-  document.getElementById('general-tab-btn').textContent = t('general');
-  document.getElementById('appearance-tab-btn').textContent = t('appearance');
-  document.getElementById('about-tab-btn').textContent = t('about');
+  const generalTabBtn = document.getElementById('general-tab-btn');
+  if (generalTabBtn) generalTabBtn.textContent = t('general');
+  const appearanceTabBtn = document.getElementById('appearance-tab-btn');
+  if (appearanceTabBtn) appearanceTabBtn.textContent = t('appearance');
+  const aboutTabBtn = document.getElementById('about-tab-btn');
+  if (aboutTabBtn) aboutTabBtn.textContent = t('about');
   
   // 更新常规设置选项
-  document.getElementById('language-label').textContent = t('language');
-  document.getElementById('show-extensions-label').textContent = t('show_extensions');
-  document.getElementById('remove-arrow-label').textContent = t('quick_icon_arrow');
-  document.getElementById('minimize-to-tray-label').textContent = t('minimize_to_tray');
-  document.getElementById('config-path-label').textContent = t('config_path') || '配置文件位置';
+  const languageLabel = document.getElementById('language-label');
+  if (languageLabel) languageLabel.textContent = t('language');
+  const showExtensionsLabel = document.getElementById('show-extensions-label');
+  if (showExtensionsLabel) showExtensionsLabel.textContent = t('show_extensions');
+  const removeArrowLabel = document.getElementById('remove-arrow-label');
+  if (removeArrowLabel) removeArrowLabel.textContent = t('quick_icon_arrow');
+  const minimizeToTrayLabel = document.getElementById('minimize-to-tray-label');
+  if (minimizeToTrayLabel) minimizeToTrayLabel.textContent = t('minimize_to_tray');
+  const configPathLabel = document.getElementById('config-path-label');
+  if (configPathLabel) configPathLabel.textContent = t('config_path') || '配置文件位置';
   
   // 重置按钮
   const resetBtn = document.querySelector('#reset-all-btn');
@@ -463,9 +481,12 @@ function updateUIText(translations) {
   }
   
   // 更新关于选项卡
-  document.getElementById('version-label').textContent = t('version').replace('{version}', '');
-  document.getElementById('developer-label').textContent = t('developer') || '开发者';
-  document.getElementById('project-address-label').textContent = t('project_address');
+  const versionLabel = document.getElementById('version-label');
+  if (versionLabel) versionLabel.textContent = t('version').replace('{version}', '') || '版本号';
+  const developerLabel = document.getElementById('developer-label');
+  if (developerLabel) developerLabel.textContent = t('developer') || '开发者';
+  const projectAddressLabel = document.getElementById('project-address-label');
+  if (projectAddressLabel) projectAddressLabel.textContent = t('project_address');
   
   // 更新GitHub链接文本
   const githubLink = document.querySelector('.project-link');
@@ -474,16 +495,22 @@ function updateUIText(translations) {
   }
   
   // 更新拖放提示
-  document.getElementById('drop-hint-1').textContent = t('drop_files_here') || '将文件或文件夹拖放到此处';
-  document.getElementById('drop-hint-2').textContent = t('support_batch_add') || '支持批量添加';
+  const dropHint1 = document.getElementById('drop-hint-1');
+  if (dropHint1) dropHint1.textContent = t('drop_files_here') || '将文件或文件夹拖放到此处';
+  const dropHint2 = document.getElementById('drop-hint-2');
+  if (dropHint2) dropHint2.textContent = t('support_batch_add') || '支持批量添加';
   
   // 更新样式设置选项卡
-  document.getElementById('coming-soon-title').textContent = t('coming_soon') || '即将推出';
-  document.getElementById('coming-soon-desc').textContent = t('style_coming_soon') || '样式设置功能正在开发中，敬请期待！';
+  const comingSoonTitle = document.getElementById('coming-soon-title');
+  if (comingSoonTitle) comingSoonTitle.textContent = t('coming_soon') || '即将推出';
+  const comingSoonDesc = document.getElementById('coming-soon-desc');
+  if (comingSoonDesc) comingSoonDesc.textContent = t('style_coming_soon') || '样式设置功能正在开发中，敬请期待！';
   
   // 输入对话框按钮
-  document.getElementById('input-dialog-confirm').textContent = t('confirm');
-  document.getElementById('input-dialog-cancel').textContent = t('cancel');
+  const inputDialogConfirm = document.getElementById('input-dialog-confirm');
+  if (inputDialogConfirm) inputDialogConfirm.textContent = t('confirm');
+  const inputDialogCancel = document.getElementById('input-dialog-cancel');
+  if (inputDialogCancel) inputDialogCancel.textContent = t('cancel');
   
   // 更新版权信息
   const copyrightText = document.getElementById('copyright-text');
@@ -634,55 +661,41 @@ function loadVersion() {
   axios.get(`${API_BASE_URL}/version`)
     .then(response => {
       const versionInfo = response.data.data;
-      
-      // 基本版本信息
       let versionText = `v${versionInfo.version} (${versionInfo.build_type})`;
-      
-      // 如果是基于Git的版本，显示更多信息
       if (versionInfo.git_info && versionInfo.full_version) {
-        // 检查是否存在版本旁边的附加信息（表示是开发中版本）
         const isDevVersion = versionInfo.full_version !== `v${versionInfo.version}`;
-        
-        // 在版本标签上添加提示信息
-        if (isDevVersion) {
-          DOM.versionValue.setAttribute('title', 
+        if (isDevVersion && DOM.versionValue) {
+          DOM.versionValue.setAttribute('title',
             `${translations.full_version || '完整版本'}: ${versionInfo.full_version}\n` +
             `${translations.last_update || '最后更新'}: ${new Date(versionInfo.timestamp).toLocaleString()}`
           );
-          
-          // 如果是开发版本，添加视觉指示器
-          versionText += ' 🚧'; // 添加施工标志表示开发中版本
+          versionText += ' 🚧';
         }
       }
-      
-      // 更新版本号标签（versionLabel只更新显示"版本"的标签文本）
-      DOM.versionLabel.textContent = translations.version?.replace('{version}', '') || '版本号';
-      
-      // 更新版本号值
-      DOM.versionValue.textContent = versionText;
+      if (DOM.versionLabel) DOM.versionLabel.textContent = translations.version?.replace('{version}', '') || '版本号';
+      if (DOM.versionValue) DOM.versionValue.textContent = versionText;
     })
     .catch(error => {
       console.error('Failed to load version:', error);
-      DOM.versionValue.textContent = 'v1.0.0';
+      if (DOM.versionValue) DOM.versionValue.textContent = 'v1.0.0';
     });
 }
 
 // 更新文件列表UI
 function updateFileListUI() {
   // 清空文件列表
-  DOM.fileList.innerHTML = '';
-  
+  if (DOM.fileList) DOM.fileList.innerHTML = '';
   // 更新文件列表容器的空状态类
-  const fileListContainer = DOM.fileList.parentNode;
-  fileListContainer.classList.toggle('empty', fileList.length === 0);
-  
+  const fileListContainer = DOM.fileList ? DOM.fileList.parentNode : null;
+  if (fileListContainer && typeof fileListContainer.classList?.toggle === 'function') {
+    fileListContainer.classList.toggle('empty', fileList.length === 0);
+  }
   // 创建文件项
   fileList.forEach((file, index) => {
     // 创建主容器
     const fileItem = document.createElement('div');
     fileItem.className = 'file-item';
     fileItem.dataset.index = index;
-    
     // 设置选中状态
     if (selectedFileIndices.includes(index)) {
       if (selectedFileIndices.length === 1 && selectedFileIndices[0] === index) {
@@ -691,7 +704,6 @@ function updateFileListUI() {
         fileItem.classList.add('multi-selected');
       }
     }
-    
     // 添加拖拽相关属性
     fileItem.setAttribute('draggable', 'true');
     fileItem.addEventListener('dragstart', handleDragStart);
@@ -700,11 +712,9 @@ function updateFileListUI() {
     fileItem.addEventListener('dragleave', handleDragLeave);
     fileItem.addEventListener('drop', handleDrop);
     fileItem.addEventListener('dragend', handleDragEnd);
-    
     // 创建图标 - 确保垂直居中
     const fileIcon = document.createElement('div');
     fileIcon.className = 'file-icon';
-    
     // 设置图标 - 检查是否是文件夹或路径名称包含文件夹标志
     const isFolder = file.is_dir === true || 
                    (typeof file.path === 'string' && 
@@ -775,7 +785,7 @@ function updateFileListUI() {
     }
     
     // 处理文件名 - 优先使用filename字段，如果不存在则使用name字段
-    let displayName = file.filename || file.name || os.path.basename(file.path);
+    let displayName = file.filename || file.name || window.electronAPI.path.basename(file.path);
     
     if (!settings.show_extensions) {
       const dotIndex = displayName.lastIndexOf('.');
@@ -829,7 +839,7 @@ function updateFileListUI() {
     fileItem.appendChild(tags);
     
     // 添加到文件列表
-    DOM.fileList.appendChild(fileItem);
+    if (DOM.fileList) DOM.fileList.appendChild(fileItem);
   });
 }
 
@@ -842,7 +852,7 @@ async function getFileIcon(filePath) {
     }
     
     // 通过IPC请求主进程获取图标
-    const iconBase64 = await ipcRenderer.invoke('get-file-icon', filePath);
+    const iconBase64 = await window.electronAPI.ipcInvoke('get-file-icon', filePath);
     if (iconBase64) {
       return `data:image/png;base64,${iconBase64}`;
     }
@@ -917,7 +927,7 @@ async function selectAndAddFiles(folderOnly = false) {
     console.log('默认路径:', defaultPath);
     
     // 使用修改后的参数调用文件对话框
-    const filePaths = await ipcRenderer.invoke('open-file-dialog', {
+    const filePaths = await window.electronAPI.ipcInvoke('open-file-dialog', {
       title: title,
       filters: folderOnly ? [] : filters,
       properties: properties,
@@ -1553,7 +1563,7 @@ function addToTray(fileIndex) {
                 
                 // 不立即创建托盘图标，仅通知主进程更新托盘菜单
                 // （托盘图标只应在"最小化到托盘"启用并关闭窗口时才创建）
-                ipcRenderer.send('update-tray-menu-no-create');
+                window.electronAPI.ipcSend('update-tray-menu-no-create');
                 
                 hideLoading();
                 showMessage(response.data.message || translations['add_to_tray_success'] || '已添加到系统托盘', 'success');
@@ -1562,7 +1572,7 @@ function addToTray(fileIndex) {
                 console.error('保存设置失败:', error);
                 // 即使保存设置失败，仍然通知主进程更新托盘菜单（不创建托盘）
                 // （托盘图标只应在"最小化到托盘"启用并关闭窗口时才创建）
-                ipcRenderer.send('update-tray-menu-no-create');
+                window.electronAPI.ipcSend('update-tray-menu-no-create');
                 hideLoading();
                 showMessage(response.data.message || translations['add_to_tray_partial_failed'] || '已添加到系统托盘，但可能未保存', 'warning');
               });
@@ -1572,7 +1582,7 @@ function addToTray(fileIndex) {
             hideLoading();
             
             // 即使加载托盘项失败，也通知主进程更新菜单（不创建托盘）
-            ipcRenderer.send('update-tray-menu-no-create');
+            window.electronAPI.ipcSend('update-tray-menu-no-create');
             updateFileListUI();
             showMessage(response.data.message || translations['add_to_tray_partial_failed'] || '已添加到系统托盘，但刷新显示失败', 'warning');
           });
@@ -1626,14 +1636,14 @@ function removeFromTray(filePath) {
               .then(() => {
                 console.log('设置已保存，确保托盘配置持久化');
                 // 通知主进程更新托盘菜单（不创建托盘）
-                ipcRenderer.send('update-tray-menu-no-create');
+                window.electronAPI.ipcSend('update-tray-menu-no-create');
                 hideLoading();
                 showMessage(response.data.message || translations['remove_from_tray_success'] || '已从系统托盘移除', 'success');
               })
               .catch(error => {
                 console.error('保存设置失败:', error);
                 // 即使保存设置失败，仍然通知主进程更新托盘菜单（不创建托盘）
-                ipcRenderer.send('update-tray-menu-no-create');
+                window.electronAPI.ipcSend('update-tray-menu-no-create');
                 hideLoading();
                 showMessage(response.data.message || translations['remove_from_tray_partial_failed'] || '已从系统托盘移除，但可能未保存', 'warning');
               });
@@ -1643,7 +1653,7 @@ function removeFromTray(filePath) {
             hideLoading();
             
             // 即使加载托盘项失败，也通知主进程更新菜单（不创建托盘）
-            ipcRenderer.send('update-tray-menu-no-create');
+            window.electronAPI.ipcSend('update-tray-menu-no-create');
             updateFileListUI();
             showMessage(response.data.message || translations['remove_from_tray_partial_failed'] || '已从系统托盘移除，但刷新显示失败', 'warning');
           });
@@ -1746,7 +1756,7 @@ function addRemark(index) {
             // 通知主进程更新托盘菜单（如果该文件在托盘中）
             trayItems.forEach(item => {
               if (item.path === fileList[index].path) {
-                ipcRenderer.send('update-tray-menu');
+                window.electronAPI.ipcSend('update-tray-menu');
                 return;
               }
             });
@@ -1830,7 +1840,7 @@ function openFileLocation(index) {
   const file = fileList[index];
   
   // 通过IPC调用主进程打开文件位置
-  ipcRenderer.invoke('open-file-location', file.path)
+  window.electronAPI.ipcInvoke('open-file-location', file.path)
     .then(success => {
       if (!success) {
         showMessage(translations['file_not_found'] || '文件未找到', 'error');
@@ -1921,7 +1931,7 @@ function addParams(index) {
             // 通知主进程更新托盘菜单（如果该文件在托盘中）
             trayItems.forEach(item => {
               if (item.path === fileList[index].path) {
-                ipcRenderer.send('update-tray-menu');
+                window.electronAPI.ipcSend('update-tray-menu');
                 return;
               }
             });
@@ -2061,7 +2071,7 @@ function saveSettings() {
           currentLanguage = newSettings.language;
           
           // 通知主进程更新翻译，主进程负责刷新窗口
-          ipcRenderer.send('language-changed', currentLanguage);
+          window.electronAPI.ipcSend('language-changed', currentLanguage);
           
           // 关闭设置对话框
           closeSettingsDialog();
@@ -2084,7 +2094,7 @@ function saveSettings() {
         
         // 如果改变了最小化到托盘设置，通知主进程更新
         if (traySettingChanged) {
-          ipcRenderer.send('update-minimize-setting', newSettings.minimize_to_tray);
+          window.electronAPI.ipcSend('update-minimize-setting', newSettings.minimize_to_tray);
         }
         
         // 关闭设置对话框
@@ -2518,4 +2528,157 @@ function handleSettingsTabClick(event) {
       }, 50);
     }
   }, 150);
-} 
+}
+
+// 初始化检查更新按钮
+function initCheckUpdateButton() {
+  if (DOM.checkUpdateBtn) {
+    DOM.checkUpdateBtn.addEventListener('click', () => {
+      // 禁用按钮，防止重复点击
+      DOM.checkUpdateBtn.disabled = true;
+      DOM.checkUpdateBtn.textContent = '检查中...';
+
+      // 发送检查更新请求到主进程
+      window.electronAPI.ipcSend('check-for-updates');
+    });
+  }
+}
+
+// 处理更新检查结果
+window.electronAPI.ipcOn('update-check-result', (event, result) => {
+  DOM.checkUpdateBtn.disabled = false;
+  DOM.checkUpdateBtn.textContent = '检查更新';
+  const updateTip = document.getElementById('update-tip');
+  if (updateTip) {
+    updateTip.textContent = '';
+    const parent = updateTip.parentNode;
+    if (parent) {
+      parent.querySelectorAll('.update-available, .no-update').forEach(el => el.remove());
+    }
+  }
+  if (result.hasUpdate) {
+    cachedUpdateResult = result; // 缓存新版本信息
+    // 显示完整新版本号提示，并可点击
+    const updateInfo = document.createElement('span');
+    updateInfo.className = 'update-available';
+    updateInfo.textContent = `发现新版本 ${result.latestVersion}`;
+    updateInfo.style.textDecoration = 'underline';
+    updateInfo.style.cursor = 'pointer';
+    updateInfo.onclick = () => showUpdateDialog(result);
+    if (updateTip) updateTip.appendChild(updateInfo);
+    // 自动弹窗
+    showUpdateDialog(result);
+  } else {
+    cachedUpdateResult = null;
+    const updateInfo = document.createElement('span');
+    updateInfo.className = 'no-update';
+    updateInfo.textContent = '已是最新版本';
+    if (updateTip) updateTip.appendChild(updateInfo);
+    // 新增：无新版本时也弹窗
+    showUpdateDialog({ hasUpdate: false });
+  }
+});
+
+// 处理更新检查错误
+window.electronAPI.ipcOn('update-check-error', (event, error) => {
+  // 恢复按钮状态
+  DOM.checkUpdateBtn.disabled = false;
+  DOM.checkUpdateBtn.textContent = '检查更新';
+
+  // 清除旧的更新提示
+  const updateTip = document.getElementById('update-tip');
+  if (updateTip) {
+    updateTip.textContent = '';
+    const parent = updateTip.parentNode;
+    if (parent) {
+      parent.querySelectorAll('.update-available, .no-update').forEach(el => el.remove());
+    }
+  }
+
+  // 显示错误提示
+  const updateInfo = document.createElement('span');
+  updateInfo.className = 'no-update';
+  updateInfo.textContent = '检查更新失败';
+  if (updateTip) updateTip.appendChild(updateInfo);
+});
+
+// 统一外链点击事件
+function bindExternalLinks() {
+  document.querySelectorAll('.external-link').forEach(link => {
+    link.addEventListener('click', function(e) {
+      e.preventDefault();
+      const url = this.getAttribute('href');
+      if (url && window.electronAPI && window.electronAPI.openExternal) {
+        window.electronAPI.openExternal(url);
+      }
+    });
+  });
+}
+
+// 显示更新日志弹窗
+function showUpdateDialog(result) {
+  const dialog = document.getElementById('update-log-dialog');
+  const content = document.getElementById('update-log-content');
+  const confirmBtn = document.getElementById('update-log-confirm');
+  const cancelBtn = document.getElementById('update-log-cancel');
+  const title = document.getElementById('update-log-title');
+  if (!dialog || !content || !confirmBtn || !cancelBtn) return;
+  if (!result.hasUpdate) {
+    title.textContent = '已是最新版本';
+    content.innerHTML = `<div style='text-align:center;line-height:2;font-size:16px;color:#333;padding:10px 0;'>您当前已是最新版本，无需更新。</div>`;
+    confirmBtn.textContent = '确定';
+    confirmBtn.style.background = '#1E88E5';
+    confirmBtn.style.fontWeight = 'bold';
+    confirmBtn.style.fontSize = '15px';
+    cancelBtn.style.display = 'none';
+    confirmBtn.onclick = () => {
+      dialog.classList.remove('show');
+      setTimeout(() => {
+        dialog.style.display = 'none';
+        cancelBtn.style.display = '';
+      }, 300);
+    };
+  } else {
+    // ... existing code for新版本弹窗 ...
+    title.textContent = `发现新版本 ${result.latestVersion || ''}`;
+    let notes = result.releaseNotes || '';
+    if (!notes && window.versionInfo && window.versionInfo.releaseNotes) {
+      notes = window.versionInfo.releaseNotes;
+    }
+    // 原：content.innerHTML = `<div style='text-align:left;line-height:1.8;font-size:15px;color:#333;padding:0 2px;'>${notes ? notes.replace(/\n/g,'<br>') : '有新版本可用，建议前往更新。'}</div>`;
+    // 改为：去除line-height，统一用外部样式
+    content.innerHTML = `<div style='text-align:left;font-size:15px;color:#333;padding:0 2px;'>${notes ? notes.replace(/\n/g,'<br>') : '有新版本可用，建议前往更新。'}</div>`;
+    confirmBtn.textContent = '立即前往新版';
+    confirmBtn.style.background = 'linear-gradient(90deg,#1E88E5,#42a5f5)';
+    confirmBtn.style.fontWeight = 'bold';
+    confirmBtn.style.fontSize = '15px';
+    cancelBtn.textContent = '暂不更新';
+    cancelBtn.style.background = '#f5f5f5';
+    cancelBtn.style.color = '#666';
+    cancelBtn.style.fontWeight = 'normal';
+    cancelBtn.style.fontSize = '15px';
+    cancelBtn.style.display = '';
+    confirmBtn.onclick = () => {
+      dialog.classList.remove('show');
+      setTimeout(() => {
+        dialog.style.display = 'none';
+        window.electronAPI.openExternal && window.electronAPI.openExternal('https://github.com/AstraSolis/QuickStart/releases/latest');
+      }, 300);
+    };
+    cancelBtn.onclick = () => {
+      dialog.classList.remove('show');
+      setTimeout(() => {
+        dialog.style.display = 'none';
+      }, 300);
+    };
+  }
+  dialog.style.display = 'flex';
+  setTimeout(() => dialog.classList.add('show'), 10);
+}
+// 让"发现新版本"提示可点击，直接弹窗
+const updateTip = document.getElementById('update-tip');
+if (updateTip) {
+  updateTip.onclick = () => {
+    if (cachedUpdateResult) showUpdateDialog(cachedUpdateResult);
+  };
+}

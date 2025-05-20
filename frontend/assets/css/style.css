@@ -446,15 +446,51 @@ body {
 }
 
 .version-info {
-  font-size: 12px;
-  color: #909399;
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 10px;
 }
 
-.version-info a {
-  color: #007acc;
-  text-decoration: none;
+#version-text {
+  font-size: 14px;
+  color: #606266;
+}
+
+#check-update-btn {
+  background-color: #409EFF;
+  color: white;
+  border: none;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+#check-update-btn:hover {
+  background-color: #66b1ff;
+}
+
+#check-update-btn:active {
+  background-color: #3a8ee6;
+}
+
+#check-update-btn:disabled {
+  background-color: #a0cfff;
+  cursor: not-allowed;
+}
+
+/* 更新提示样式 */
+.update-available {
+  color: #67C23A;
+  font-size: 13px;
+  margin-left: 10px;
+}
+
+.no-update {
+  color: #909399;
+  font-size: 13px;
+  margin-left: 10px;
 }
 
 .button-group {
@@ -1677,99 +1713,50 @@ body {
   margin: 0;
 }
 
-/* 关于标签样式 */
-.about-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 10px 0 20px;
+/* 关于页面美化 */
+.about-block {
+  background: #f8fafd;
+  border-radius: 8px;
+  padding: 18px 18px 10px 18px;
+  margin-bottom: 10px;
+  box-shadow: 0 2px 8px rgba(30,136,229,0.04);
 }
-
-.app-logo {
-  margin-bottom: 20px;
-  text-align: center;
-}
-
-.app-logo img {
-  width: 80px;
-  height: 80px;
-  border-radius: 12px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s ease;
-}
-
-.app-logo img:hover {
-  transform: scale(1.05);
-}
-
-.app-info {
-  width: 100%;
-}
-
-.about-container .form-group {
-  margin-bottom: 12px;
+.about-row {
   display: flex;
   align-items: center;
+  margin-bottom: 14px;
+  font-size: 14px;
 }
-
-.about-container .form-group label {
-  font-weight: 500;
-  color: #455A64;
+.about-row label {
   flex: 0 0 80px;
+  color: #409EFF;
+  font-weight: 500;
+  margin-right: 8px;
   font-size: 14px;
 }
-
-.about-container .form-group span {
-  font-size: 14px;
-  color: #607D8B;
+.about-row .version-number {
+  font-size: 15px;
+  color: #222;
+  font-weight: bold;
+  margin-right: 12px;
 }
-
-.project-link {
+.version-row {
+  gap: 8px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.version-actions {
   display: flex;
+  flex-direction: row;
   align-items: center;
-  text-decoration: none;
-  color: #1E88E5;
-  font-size: 14px;
-  transition: all 0.2s ease;
+  gap: 8px;
+  margin-left: 10px;
 }
-
-.project-link svg {
-  margin-right: 6px;
-  transition: transform 0.2s ease;
-}
-
-.project-link:hover {
-  color: #1565C0;
-}
-
-.project-link:hover svg {
-  transform: scale(1.1);
-}
-
-.copyright {
-  margin-top: 25px;
-  text-align: center;
-}
-
-.copyright p {
-  font-size: 12px;
-  color: #90A4AE;
+#update-tip, .update-available, .no-update {
+  white-space: nowrap;
+  min-width: 0;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   margin: 0;
-}
-
-/* 让确定和取消按钮更加突出 */
-#settings-save-btn, #settings-cancel-btn {
-  min-width: 80px;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-#settings-save-btn:hover {
-  transform: translateY(-2px);
-}
-
-.settings-dialog-content .form-group select:focus,
-.settings-dialog-content .form-group input[type="text"]:focus {
-  border-color: #1E88E5;
-  background-color: #fff;
-  box-shadow: 0 0 0 3px rgba(30, 136, 229, 0.2);
 } 

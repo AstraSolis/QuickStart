@@ -320,9 +320,10 @@ function createWindow() {
     height: 600,
     icon: iconPath,
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
-      enableRemoteModule: true,
+      nodeIntegration: false,
+      contextIsolation: true,
+      enableRemoteModule: false,
+      preload: path.join(__dirname, 'preload.js')
     },
     // 设置标题栏样式和背景色
     titleBarStyle: 'default',
@@ -1943,3 +1944,55 @@ function loadTrayItems() {
       appState.trayItemsLoaded = false;
     });
 } 
+
+// 检查更新函数
+async function checkForUpdates(sender) {
+  try {
+    // 读取项目根目录下的版本信息
+    const versionPath = path.join(__dirname, '..', 'version.json');
+    const versionJson = JSON.parse(fs.readFileSync(versionPath, 'utf8'));
+    const localVersion = versionJson.version;
+
+    // 获取GitHub最新发布版本
+    const response = await axios.get('https://api.github.com/repos/AstraSolis/QuickStart/releases/latest');
+    const latestVersion = response.data.tag_name.replace('v', '');
+
+    // 比较版本号
+    const hasUpdate = compareVersions(latestVersion, localVersion) > 0;
+
+    // 发送更新检查结果到渲染进程
+    sender.send('update-check-result', {
+      hasUpdate,
+      currentVersion: localVersion,
+      latestVersion: latestVersion,
+      releaseNotes: response.data.body
+    });
+
+  } catch (error) {
+    console.error('检查更新失败:', error);
+    sender.send('update-check-error', error.message);
+  }
+}
+
+// 版本号比较函数
+function compareVersions(v1, v2) {
+  const v1Parts = v1.split('.').map(Number);
+  const v2Parts = v2.split('.').map(Number);
+
+  for (let i = 0; i < 3; i++) {
+    if (v1Parts[i] > v2Parts[i]) return 1;
+    if (v1Parts[i] < v2Parts[i]) return -1;
+  }
+  return 0;
+}
+
+// 监听检查更新请求
+ipcMain.on('check-for-updates', (event) => {
+  checkForUpdates(event.sender);
+});
+
+// ... existing code ...
+ipcMain.on('open-external-link', (event, url) => {
+  if (url) shell.openExternal(url);
+});
+// ... existing code ...
