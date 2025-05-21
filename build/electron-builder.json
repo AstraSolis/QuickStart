@@ -1,0 +1,36 @@
+{
+  "appId": "com.quickstart.app",
+  "productName": "QuickStart",
+  "directories": {
+    "output": "dist"
+  },
+  "files": [
+    "frontend/**/*",
+    "backend/**/*",
+    "package.json",
+    "version.json",
+    "languages.json"
+  ],
+  "extraResources": [
+    {
+      "from": "dist/backend.exe",
+      "to": "backend/backend.exe"
+    }
+  ],
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": ["x64"]
+      }
+    ],
+    "icon": "frontend/assets/icon.ico"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "QuickStart"
+  }
+} 

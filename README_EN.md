@@ -1,3 +1,5 @@
+# QuickStart
+
 <div align="center">
     <h1>QuickStart</h1>
     <p>An Electron and Python based quick launch tool to efficiently manage and access your files</p>
@@ -145,15 +147,7 @@ npm run dev
 
 #### Build Executable
 
-```bash
-# Update version information (optional)
-npm run version
-
-# Build application
-npm run build
-```
-
-After building, you can find the installer in the `dist` directory.
+Please refer to the [Build Guide](./build/README.md) for detailed build steps and instructions.
 
 #### Version Release
 

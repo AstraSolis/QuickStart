@@ -214,26 +214,24 @@ function getIconPath() {
 function startPythonServer() {
   // 检查当前环境
   const isProd = app.isPackaged;
-  let pythonPath, scriptPath;
+  let backendCmd, backendArgs;
   
   if (isProd) {
-    // 生产环境（打包后）
-    pythonPath = path.join(process.resourcesPath, 'python', 'python.exe');
-    scriptPath = path.join(process.resourcesPath, 'backend', 'app.py');
+    // 生产环境（打包后）直接运行 backend.exe
+    backendCmd = path.join(process.resourcesPath, 'backend', process.platform === 'win32' ? 'backend.exe' : 'backend');
+    backendArgs = [port.toString()];
   } else {
-    // 开发环境
-    pythonPath = 'python';
-    scriptPath = path.join(__dirname, '..', 'backend', 'app.py');
+    // 开发环境，调用 python app.py
+    backendCmd = 'python';
+    backendArgs = [path.join(__dirname, '..', 'backend', 'app.py'), port.toString()];
   }
   
   // 设置环境变量，确保Python进程使用UTF-8编码
   const env = { ...process.env, PYTHONIOENCODING: 'utf-8' };
   
-  // 启动Python服务器，传入端口号
-  pyProc = spawn(pythonPath, [scriptPath, port.toString()], {
-    // 明确设置stdio选项，确保进程能接收信号
+  // 启动后端服务器
+  pyProc = spawn(backendCmd, backendArgs, {
     stdio: ['ignore', 'pipe', 'pipe'],
-    // 传递环境变量
     env: env
   });
   

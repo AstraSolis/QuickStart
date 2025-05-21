@@ -4,7 +4,6 @@ __pycache__/
 *$py.class
 *.so
 .Python
-build/
 develop-eggs/
 dist/
 downloads/
@@ -61,6 +60,74 @@ Thumbs.db
 pythonRuntime/
 *.spec
 
+# Backup and temp files
+*.bak
+*.tmp
+*.old
+*.ps-bak
+*.fix-bak
+*~
+copy/
+
+# PyInstaller files
+*.toc
+*.pyz
+*.pyzw
+warn-*.txt
+xref-*.html
+generated-*.ico
+base_library.zip
+localpycs/
+!*.spec
+build/pyinstaller/backend.pkg
+
 # Generate during development but not required for source control
 version.txt
-version.json 
+version.json
+
+# 系统托盘相关的临时文件
+quickstart-icons/
+tray-temp/
+**/tmp/quickstart-icons/
+**/temp/tray-icons/
+**/system-tray-cache/
+
+# 额外的日志文件
+logs/
+*.log.*
+debug.log
+error.log
+app.log
+
+# 应用程序设置备份
+*.db.bak*
+*.db.reset
+config.bak.*
+settings.bak.*
+
+# 操作系统文件
+desktop.ini
+.directory
+ehthumbs.db
+Icon?
+
+# 开发文档
+README_dev.md
+
+# 构建输出
+/dist/
+/out/
+*.exe
+*.msi
+*.dmg
+*.app
+
+# 临时文件
+.temp/
+.tmp/
+temp/
+tmp/
+
+# 系统文件
+$RECYCLE.BIN/
+System Volume Information/
