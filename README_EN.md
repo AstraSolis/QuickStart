@@ -194,8 +194,17 @@ quickstart/
 │   ├── assets/             # Static resources
 │   ├── index.html          # Main page
 │   ├── main.js             # Electron main process
+│   ├── preload.js          # Preload script
 │   ├── renderer.js         # Rendering process
 │   └── styles.css          # Stylesheet
+│
+├── build/                  # Build related
+│   ├── pyinstaller/        # PyInstaller build directory
+│   ├── build.py            # Python build script
+│   ├── build.ps1           # PowerShell build script
+│   ├── electron-builder.json # Electron build configuration
+│   ├── pyinstaller.spec    # PyInstaller configuration file
+│   └── README.md           # Build documentation
 │
 ├── scripts/                # Script tools
 │   ├── update-version.js   # Version information update tool
@@ -260,7 +269,7 @@ Welcome to submit Issues and Pull Requests to improve this project together!
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-For more information on commit conventions, please refer to [COMMIT_CONVENTION.md](./COMMIT_CONVENTION.md).
+For more information on commit conventions, please refer to [COMMIT_CONVENTION](./COMMIT_CONVENTION.md).
 
 ---
 

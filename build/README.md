@@ -1,4 +1,4 @@
-# 打包说明文档
+# 构建说明文档
 
 本文档说明如何使用打包脚本将项目打包为可分发的应用程序。
 
@@ -47,19 +47,6 @@
    .\build\build.ps1
    ```
 
-### 方法三：手动打包
-
-如果需要手动控制打包过程，可以使用以下 npm 脚本：
-
-```bash
-# 构建 Windows 版本
-npm run build:win
-
-# 构建 macOS 版本
-npm run build:mac
-
-# 构建 Linux 版本
-npm run build:linux
 ```
 
 ## 打包输出

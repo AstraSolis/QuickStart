@@ -2,6 +2,13 @@
 
 本文档包含 QuickStart 项目在不同环境下可能遇到的安装问题和相应解决方案。
 
+## 系统要求
+
+- Windows 10 及以上版本
+- Python 3.x
+- Node.js 14.x 及以上版本
+- Git
+
 ## 常见安装问题
 
 ### 1. 编码问题
@@ -54,6 +61,25 @@ ModuleNotFoundError: No module named 'flask'
   pip install flask flask-cors pywin32 Pillow
   ```
 - 确保您的虚拟环境已激活（如果使用）
+
+### 4. 构建问题
+
+如果您在构建过程中遇到问题：
+
+```
+Error: Cannot find module 'electron-builder'
+```
+
+**解决方案**：
+- 确保已安装所有构建依赖：
+  ```
+  npm install --save-dev electron-builder
+  ```
+- 检查 build 目录下的配置文件是否正确
+- 确保已安装所有Python构建依赖：
+  ```
+  pip install pyinstaller
+  ```
 
 ## 首次安装步骤（推荐）
 
@@ -108,9 +134,33 @@ ModuleNotFoundError: No module named 'flask'
    cd ..
    ```
 
-6. 启动项目
+6. 安装构建依赖
+   ```
+   npm install --save-dev electron-builder
+   pip install pyinstaller
+   ```
+
+7. 启动项目
    ```
    npm run dev
+   ```
+
+## 构建步骤
+
+1. 构建前端
+   ```
+   npm run build
+   ```
+
+2. 构建后端
+   ```
+   cd build
+   python build.py
+   ```
+
+3. 打包应用
+   ```
+   npm run package
    ```
 
 ## 项目启动后的常见问题
@@ -120,10 +170,11 @@ ModuleNotFoundError: No module named 'flask'
 1. 端口占用：确保5000端口未被其他应用占用
 2. 路径问题：确保项目路径中没有特殊字符或非ASCII字符
 3. 权限问题：某些功能可能需要管理员权限
+4. 构建问题：确保所有构建依赖都已正确安装
 
 ## 联系支持
 
 如果您遇到无法解决的问题，请通过以下方式联系我们：
 
 1. 在GitHub上提交Issue：[Issues页面](https://github.com/AstraSolis/QuickStart/issues)
-2. 发送邮件到：[开发者邮箱] 
+2. 发送邮件到：AstraSolis@QQ.com

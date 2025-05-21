@@ -1,6 +1,6 @@
 # 提交规范
 
-本项目使用 [Conventional Commits](https://www.conventionalcommits.org/) 规范进行版本管理。这有助于自动化版本控制、生成变更日志和追踪项目历史。
+本项目采用 [Conventional Commits](https://www.conventionalcommits.org/) 规范进行版本管理。这有助于自动化版本控制、生成变更日志和追踪项目历史。
 
 ## 提交消息格式
 
@@ -110,29 +110,29 @@ BREAKING CHANGE: 文件管理API已经完全改变，
 ## 使用方法
 
 1. 安装依赖：
-   ```
+   ```bash
    npm install --save-dev @commitlint/cli @commitlint/config-conventional
    ```
 
 2. 使用 husky 设置 git hooks：
-   ```
+   ```bash
    npm install --save-dev husky
    npx husky install
    npx husky add .husky/commit-msg 'npx --no -- commitlint --edit $1'
    ```
 
 3. 提交代码时使用规范格式：
-   ```
+   ```bash
    git commit -m "feat: 添加新功能"
    ```
 
 4. 或使用交互式工具：
-   ```
+   ```bash
    npx commit
    ```
 
 5. 发布新版本：
-   ```
+   ```bash
    npm run release
    ```
 
