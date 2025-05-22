@@ -13,6 +13,7 @@ import win32ui
 import win32gui
 import win32api
 import win32com.client
+from win32com.shell import shell
 from typing import Optional, Tuple
 import struct
 import uuid
@@ -161,195 +162,131 @@ class SystemManager:
             return None
     
     def _icon_to_bitmap(self, hicon: int) -> bytes:
-        """将图标句柄转换为位图数据"""
+        """将图标句柄转换为位图数据 - 简化版"""
         try:
-            # 检查是否需要添加箭头（当remove_arrow为False时显示箭头）
+            print(f"开始转换图标句柄: {hicon}")
+            # 检查是否需要显示箭头
             show_arrow = False
             if self.config_manager:
                 remove_arrow = self.config_manager.get("remove_arrow", False)
                 show_arrow = not remove_arrow
-
-                
-            # 获取图标信息
-            icon_info = win32gui.GetIconInfo(hicon)
+                print(f"移除箭头设置: {remove_arrow}, 显示箭头: {show_arrow}")
+            
+            # 获取图标尺寸
+            sz = self._get_icon_size(hicon)
+            if not sz:
+                sz = (48, 48)  # 默认尺寸
+            
+            # 使用固定尺寸以确保一致性
+            target_size = (64, 64)
+            print(f"原始图标尺寸: {sz}, 目标尺寸: {target_size}")
             
             # 创建设备上下文
             dc = win32ui.CreateDCFromHandle(win32gui.GetDC(0))
             memdc = dc.CreateCompatibleDC()
             
-            # 确定图标尺寸
-            sz = self._get_icon_size(hicon)
-            if not sz:
-                # 如果无法获取尺寸，使用默认尺寸
-                sz = (48, 48)
-            
-            # 尝试使用更大的绘制尺寸以提高图标质量
-            target_size = (max(sz[0], 64), max(sz[1], 64))
-                
             # 创建位图
             bmp = win32ui.CreateBitmap()
             bmp.CreateCompatibleBitmap(dc, target_size[0], target_size[1])
             memdc.SelectObject(bmp)
             
-            # 先清空位图（透明背景）
-            win32gui.FillRect(memdc.GetHandleOutput(), (0, 0, target_size[0], target_size[1]), win32gui.GetStockObject(0))  # BLACK_BRUSH
+            # 清空位图（设置透明背景）
+            win32gui.FillRect(memdc.GetHandleOutput(), (0, 0, target_size[0], target_size[1]), win32gui.GetStockObject(0))
             
-            # 始终使用DI_NOMIRROR标志绘制图标，确保不显示系统箭头
-            # 这样获取到的图标始终没有系统箭头
-            draw_flags = win32con.DI_NORMAL | 0x0010  # DI_NOMIRROR = 0x0010
-            
-            # 使用标志绘制图标
-            win32gui.DrawIconEx(
-                memdc.GetHandleOutput(), 
-                0, 0, 
-                hicon, 
-                target_size[0], target_size[1], 
-                0, None, 
-                draw_flags
-            )
+            # 使用标准标志绘制图标
+            try:
+                win32gui.DrawIconEx(
+                    memdc.GetHandleOutput(),
+                    0, 0,
+                    hicon,
+                    target_size[0], target_size[1],
+                    0, None,
+                    win32con.DI_NORMAL  # 使用标准标志
+                )
+                print("成功绘制图标")
+            except Exception as draw_err:
+                print(f"绘制图标失败: {draw_err}")
+                raise
             
             # 获取位图数据
-            bits = bmp.GetBitmapBits(True)
-            
-            # 创建PIL图片对象
-            img = Image.frombuffer(
-                'RGBA', (target_size[0], target_size[1]), bits, 'raw', 'BGRA', 0, 1
-            )
-            
-            # 如果需要显示箭头，手动添加自定义箭头图标
-            if show_arrow:
-                try:
-                    # 获取箭头图标路径
-                    arrow_icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
-                                               "frontend", "assets", "img", "arrow_icon.png")
-                    
-                    # 检查图标文件是否存在
-                    if os.path.exists(arrow_icon_path):
-                        # 打开箭头图标
-                        arrow_img = Image.open(arrow_icon_path).convert('RGBA')
-                        
-                        # 设置箭头大小和位置
-                        icon_size = min(target_size[0], target_size[1])
-                        arrow_size = int(icon_size * 0.4)  # 箭头尺寸
-                        
-                        # 调整箭头大小 - 使用高质量重采样
-                        try:
-                            # 尝试使用LANCZOS重采样（在PIL/Pillow中质量最好的方法）
-                            arrow_img = arrow_img.resize((arrow_size, arrow_size), Image.LANCZOS)
-                        except AttributeError:
-                            # 对于较旧版本的PIL，LANCZOS可能不可用，回退到ANTIALIAS
-                            arrow_img = arrow_img.resize((arrow_size, arrow_size), Image.ANTIALIAS)
-                        
-                        # 计算箭头位置（左下角）
-                        offset_x = int(icon_size * 0.1)
-                        offset_y = int(icon_size * 0.1)
-                        paste_x = offset_x
-                        paste_y = target_size[1] - offset_y - arrow_size
-                        
-                        # 创建透明层用于箭头
-                        arrow_layer = Image.new('RGBA', img.size, (0, 0, 0, 0))
-                        arrow_layer.paste(arrow_img, (paste_x, paste_y), arrow_img)
-                        
-                        # 将箭头叠加到图标上
-                        img = Image.alpha_composite(img, arrow_layer)
-
-                    else:
-                        # 如果图标文件不存在，使用原来的绘制方法
-                        print(f"箭头图标文件不存在: {arrow_icon_path}，使用绘制方法")
-                        # 创建透明箭头图层
-                        arrow_layer = Image.new('RGBA', img.size, (0, 0, 0, 0))
-                        
-                        # 导入绘图模块
-                        from PIL import ImageDraw
-                        
-                        # 创建绘图对象
-                        draw = ImageDraw.Draw(arrow_layer)
-                        
-                        # 重新调整箭头大小和位置
-                        icon_size = min(target_size[0], target_size[1])
-                        
-                        # 箭头占图标的比例
-                        arrow_size = int(icon_size * 0.28)
-                        
-                        # 调整箭头在左下角的位置
-                        offset_x = int(icon_size * 0.12)
-                        offset_y = int(icon_size * 0.12)
-                        bottom_left_x = offset_x
-                        bottom_left_y = target_size[1] - offset_y
-                        
-                        # 绘制半透明白色背景圆形
-                        bg_radius = int(arrow_size * 0.9)
-                        bg_x = bottom_left_x - bg_radius//2
-                        bg_y = bottom_left_y - bg_radius//2
-                        draw.ellipse(
-                            [bg_x, bg_y, bg_x + bg_radius, bg_y + bg_radius], 
-                            fill=(255, 255, 255, 180)
-                        )
-                        
-                        # 绘制箭头形状（使用直角折线）
-                        # 计算箭头各部分的位置
-                        line_width = max(1, int(arrow_size / 9))
-                        
-                        # 垂直线段
-                        v_x = bottom_left_x
-                        v_top_y = bottom_left_y - arrow_size + int(arrow_size * 0.25)
-                        v_bottom_y = bottom_left_y - int(arrow_size * 0.2)
-                        
-                        # 水平线段
-                        h_left_x = v_x
-                        h_right_x = bottom_left_x + int(arrow_size * 0.8)
-                        h_y = v_bottom_y
-                        
-                        # 箭头尖部
-                        a1_x = h_right_x - int(arrow_size * 0.3)
-                        a1_y = h_y - int(arrow_size * 0.3)
-                        a2_x = h_right_x
-                        a2_y = h_y
-                        
-                        # 使用深蓝色绘制箭头
-                        arrow_color = (0, 0, 160, 230)
-                        
-                        # 绘制箭头线段
-                        draw.line([(v_x, v_top_y), (v_x, v_bottom_y)], fill=arrow_color, width=line_width)
-                        draw.line([(h_left_x, h_y), (h_right_x, h_y)], fill=arrow_color, width=line_width)
-                        draw.line([(a1_x, a1_y), (a2_x, a2_y)], fill=arrow_color, width=line_width)
-                        
-                        # 将箭头叠加到图标上
-                        img = Image.alpha_composite(img, arrow_layer)
-
-                except Exception as e:
-                    print(f"添加箭头失败: {e}")
-            
-            # 保存为PNG，使用最高质量设置
-            output = io.BytesIO()
-            img.save(output, format="PNG", optimize=True, compression=0)
-            return output.getvalue()
-            
-        except Exception as e:
-            print(f"图标转换为位图失败: {e}")
-            
-            # 尝试备选方法
             try:
-                # 创建临时图标文件
-                with tempfile.NamedTemporaryFile(suffix='.ico', delete=False) as temp_file:
-                    temp_path = temp_file.name
-                
-                # 保存图标
-                ctypes.windll.user32.DrawIconEx(
-                    win32gui.GetDC(0), 0, 0, hicon, 0, 0, 0, None, win32con.DI_NORMAL
-                )
-                
-                # 读取图标文件并转换
-                with open(temp_path, 'rb') as f:
-                    icon_data = f.read()
-                
-                # 删除临时文件
-                os.unlink(temp_path)
-                
-                return icon_data
-            except Exception as inner_e:
-                print(f"备选方法也失败: {inner_e}")
+                bits = bmp.GetBitmapBits(True)
+                print(f"获取到位图数据, 大小: {len(bits)} 字节")
+            except Exception as bits_err:
+                print(f"获取位图数据失败: {bits_err}")
                 raise
+            
+            # 使用PIL处理图像
+            if PIL_AVAILABLE:
+                try:
+                    img = Image.frombuffer(
+                        'RGBA', (target_size[0], target_size[1]), bits, 'raw', 'BGRA', 0, 1
+                    )
+                    
+                    # 如果需要显示箭头，添加自定义箭头
+                    if show_arrow:
+                        print("添加自定义箭头")
+                        # 添加箭头图标
+                        arrow_icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
+                                                   "frontend", "assets", "img", "arrow_icon.png")
+                        if os.path.exists(arrow_icon_path):
+                            print(f"箭头图标路径存在: {arrow_icon_path}")
+                            arrow_img = Image.open(arrow_icon_path).convert('RGBA')
+                            # 箭头尺寸为图标的40%
+                            arrow_size = int(target_size[0] * 0.4)
+                            try:
+                                arrow_img = arrow_img.resize((arrow_size, arrow_size), Image.LANCZOS)
+                            except AttributeError:
+                                arrow_img = arrow_img.resize((arrow_size, arrow_size), Image.ANTIALIAS)
+                            
+                            # 箭头位置（左下角）
+                            paste_x = int(target_size[0] * 0.1)
+                            paste_y = target_size[1] - int(target_size[1] * 0.1) - arrow_size
+                            
+                            # 创建透明层用于箭头
+                            arrow_layer = Image.new('RGBA', target_size, (0, 0, 0, 0))
+                            arrow_layer.paste(arrow_img, (paste_x, paste_y), arrow_img)
+                            
+                            # 添加箭头
+                            img = Image.alpha_composite(img, arrow_layer)
+                            print("成功添加自定义箭头")
+                        else:
+                            print(f"箭头图标不存在: {arrow_icon_path}")
+                    
+                    # 保存为PNG
+                    output = io.BytesIO()
+                    img.save(output, format="PNG", optimize=True)
+                    png_data = output.getvalue()
+                    print(f"成功转换为PNG, 大小: {len(png_data)} 字节")
+                    return png_data
+                except Exception as pil_err:
+                    print(f"PIL处理图像失败: {pil_err}")
+                    # 如果PIL处理失败，尝试直接返回位图数据
+                    return bits
+            else:
+                # 如果PIL不可用，直接返回位图数据
+                print("PIL不可用，直接返回位图数据")
+                return bits
+                
+        except Exception as e:
+            print(f"图标转换为位图完全失败: {e}")
+            import traceback
+            traceback.print_exc()
+            
+            # 在所有方法都失败的情况下，返回一个空白图标
+            try:
+                if PIL_AVAILABLE:
+                    # 创建一个空白图标
+                    img = Image.new('RGBA', (64, 64), (200, 200, 200, 255))
+                    output = io.BytesIO()
+                    img.save(output, format="PNG")
+                    print("返回空白图标")
+                    return output.getvalue()
+            except:
+                pass
+            
+            # 如果连空白图标都创建失败，返回None
+            return None
     
     def _get_icon_size(self, hicon: int) -> Optional[Tuple[int, int]]:
         """获取图标尺寸"""
@@ -586,43 +523,90 @@ class SystemManager:
     def get_lnk_icon(self, file_path: str) -> Optional[bytes]:
         """获取.lnk快捷方式文件的图标"""
         try:
-
-            
+            print(f"开始获取LNK图标: {file_path}")
             # 检查是否需要移除箭头
             remove_arrow = False
             if self.config_manager:
                 remove_arrow = self.config_manager.get("remove_arrow", False)
-
+                print(f"移除箭头设置: {remove_arrow}")
             
-            # 尝试获取目标文件图标（无箭头）
+            # 方法1: 尝试获取目标文件图标（无箭头）
             try:
+                print("方法1: 尝试获取目标文件图标")
                 # 初始化COM环境以获取目标路径
                 pythoncom.CoInitialize()
                 try:
-                    shell = win32com.client.Dispatch("WScript.Shell")
-                    shortcut = shell.CreateShortCut(file_path)
-                    target_path = shortcut.TargetPath
+                    # 使用 ShellLink 接口获取目标路径 - 更可靠的方式
+                    shell_link = pythoncom.CoCreateInstance(
+                        shell.CLSID_ShellLink, None,
+                        pythoncom.CLSCTX_INPROC_SERVER, shell.IID_IShellLink
+                    )
+                    persist_file = shell_link.QueryInterface(pythoncom.IID_IPersistFile)
+                    persist_file.Load(file_path)
+                    
+                    # 获取目标路径
+                    target_path, _ = shell_link.GetPath(0)
+                    print(f"获取到的目标路径: {target_path}")
                     
                     if target_path and os.path.exists(target_path):
-
+                        print(f"目标路径存在，尝试获取目标图标")
                         # 直接获取目标文件的图标
                         icon_data = self.get_icon_win32(target_path)
                         if icon_data:
+                            print(f"方法1成功: 获取到目标文件图标，大小: {len(icon_data)} 字节")
                             pythoncom.CoUninitialize()
                             return icon_data
+                        else:
+                            print("方法1失败: 无法获取目标文件图标")
+                        
+                    # 如果没有有效的目标路径或无法获取图标，尝试直接从快捷方式获取图标
+                    print("尝试从LNK文件本身的图标位置获取")
+                    icon_location = shell_link.GetIconLocation()
+                    print(f"图标位置: {icon_location}")
+                    
+                    if icon_location and icon_location[0] and os.path.exists(icon_location[0]):
+                        print(f"图标位置存在，尝试获取图标: {icon_location[0]}, 索引: {icon_location[1]}")
+                        # 从指定的图标位置获取图标
+                        large_icons = (ctypes.c_int * 1)()
+                        small_icons = (ctypes.c_int * 1)()
+                        
+                        num_icons = ctypes.windll.shell32.ExtractIconExW(
+                            icon_location[0], icon_location[1], large_icons, small_icons, 1
+                        )
+                        print(f"提取的图标数: {num_icons}")
+                        
+                        if num_icons > 0 and large_icons[0]:
+                            print("成功提取图标，转换为位图")
+                            # 转换图标为位图
+                            icon_data = self._icon_to_bitmap(large_icons[0])
+                            
+                            # 释放图标
+                            ctypes.windll.user32.DestroyIcon(large_icons[0])
+                            if small_icons[0]:
+                                ctypes.windll.user32.DestroyIcon(small_icons[0])
+                            
+                            if icon_data:
+                                print(f"方法1成功: 从图标位置获取图标，大小: {len(icon_data)} 字节")
+                                pythoncom.CoUninitialize()
+                                return icon_data
+                            else:
+                                print("方法1失败: 图标转换为位图失败")
+                        else:
+                            print("方法1失败: 未提取到图标")
                 finally:
                     pythoncom.CoUninitialize()
             except Exception as e:
-                print(f"获取目标文件图标失败: {e}")
+                print(f"方法1失败，错误: {e}")
             
-            # 如果获取目标文件图标失败，使用Shell API获取快捷方式图标
+            # 方法2: 使用Shell API获取快捷方式图标
             try:
-
+                print("方法2: 使用Shell API获取快捷方式图标")
                 shell32 = ctypes.windll.shell32
                 SHGFI_ICON = 0x000000100
                 SHGFI_LARGEICON = 0x000000000
+                SHGFI_LINKOVERLAY = 0x000008000  # 使链接覆盖可见
                 
-                # 尝试使用SHGFI_ICON直接获取图标
+                # 使用SHGFI_ICON直接获取图标
                 class SHFILEINFOW(ctypes.Structure):
                     _fields_ = [
                         ("hIcon", ctypes.c_void_p),
@@ -633,13 +617,20 @@ class SystemManager:
                     ]
                 
                 info = SHFILEINFOW()
+                # 使用SHGFI_LINKOVERLAY标志直接获取带箭头的快捷方式图标
+                flags = SHGFI_ICON | SHGFI_LARGEICON
+                if not remove_arrow:
+                    flags |= SHGFI_LINKOVERLAY
+                    print("添加SHGFI_LINKOVERLAY标志")
+                
+                print(f"调用SHGetFileInfoW, 文件路径: {file_path}")
                 result = shell32.SHGetFileInfoW(
-                    file_path, 0, ctypes.byref(info), ctypes.sizeof(info), 
-                    SHGFI_ICON | SHGFI_LARGEICON
+                    file_path, 0, ctypes.byref(info), ctypes.sizeof(info), flags
                 )
+                print(f"SHGetFileInfoW结果: {result}, 图标句柄: {info.hIcon}")
                 
                 if result and info.hIcon:
-
+                    print("获取到图标句柄，转换为位图")
                     # 将图标转换为位图
                     icon_data = self._icon_to_bitmap(info.hIcon)
                     
@@ -647,30 +638,31 @@ class SystemManager:
                     ctypes.windll.user32.DestroyIcon(info.hIcon)
                     
                     if icon_data:
-
+                        print(f"方法2成功: 图标大小: {len(icon_data)} 字节")
                         return icon_data
                     else:
-                        print("转换图标为位图失败")
+                        print("方法2失败: 转换图标为位图失败")
                 else:
-                    print("未能获取图标句柄")
+                    print("方法2失败: 未能获取图标句柄")
             except Exception as e:
-                print(f"使用Shell API获取LNK图标失败: {e}")
+                print(f"方法2失败，错误: {e}")
             
-            # 尝试直接使用ExtractIconEx
+            # 方法3: 尝试直接使用ExtractIconEx
             try:
-
+                print("方法3: 尝试直接使用ExtractIconEx")
                 # 提取图标
                 large_icons = (ctypes.c_int * 1)()
                 small_icons = (ctypes.c_int * 1)()
                 
+                print(f"调用ExtractIconExW, 文件路径: {file_path}")
                 # 直接从快捷方式文件提取图标
                 num_icons = ctypes.windll.shell32.ExtractIconExW(
                     file_path, 0, large_icons, small_icons, 1
                 )
-
+                print(f"ExtractIconExW结果, 提取的图标数: {num_icons}")
                 
                 if num_icons > 0 and large_icons[0]:
-
+                    print("成功提取图标，转换为位图")
                     # 转换图标为位图
                     icon_data = self._icon_to_bitmap(large_icons[0])
                     
@@ -680,14 +672,14 @@ class SystemManager:
                         ctypes.windll.user32.DestroyIcon(small_icons[0])
                     
                     if icon_data:
-
+                        print(f"方法3成功: 图标大小: {len(icon_data)} 字节")
                         return icon_data
                     else:
-                        print("未提取到任何图标")
+                        print("方法3失败: 转换图标为位图失败")
                 else:
-                    print("未提取到任何图标")
+                    print("方法3失败: 未提取到任何图标")
             except Exception as e:
-                print(f"使用ExtractIconEx获取LNK图标失败: {e}")
+                print(f"方法3失败，错误: {e}")
             
             # 默认返回空
             print("所有方法都失败，无法获取LNK图标")

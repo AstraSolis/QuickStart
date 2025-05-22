@@ -684,62 +684,82 @@ function loadVersion() {
 // 更新文件列表UI
 function updateFileListUI() {
   // 清空文件列表
-  if (DOM.fileList) DOM.fileList.innerHTML = '';
-  // 更新文件列表容器的空状态类
-  const fileListContainer = DOM.fileList ? DOM.fileList.parentNode : null;
-  if (fileListContainer && typeof fileListContainer.classList?.toggle === 'function') {
-    fileListContainer.classList.toggle('empty', fileList.length === 0);
+  DOM.fileList.innerHTML = '';
+  
+  // 如果文件列表为空，显示提示信息
+  if (!fileList || fileList.length === 0) {
+    const emptyMessage = document.createElement('div');
+    emptyMessage.className = 'empty-message';
+    emptyMessage.textContent = '没有文件，点击"添加文件"按钮开始添加';
+    DOM.fileList.appendChild(emptyMessage);
+    return;
   }
-  // 创建文件项
+  
+  // 遍历文件列表，创建文件项
   fileList.forEach((file, index) => {
     // 创建主容器
     const fileItem = document.createElement('div');
     fileItem.className = 'file-item';
     fileItem.dataset.index = index;
-    // 设置选中状态
+    fileItem.dataset.path = file.path;
+    
+    // 添加选中状态类
     if (selectedFileIndices.includes(index)) {
-      if (selectedFileIndices.length === 1 && selectedFileIndices[0] === index) {
-        fileItem.classList.add('selected');
-      } else {
-        fileItem.classList.add('multi-selected');
-      }
+      fileItem.classList.add('selected');
     }
-    // 添加拖拽相关属性
-    fileItem.setAttribute('draggable', 'true');
-    fileItem.addEventListener('dragstart', handleDragStart);
-    fileItem.addEventListener('dragover', handleDragOver);
-    fileItem.addEventListener('dragenter', handleDragEnter);
-    fileItem.addEventListener('dragleave', handleDragLeave);
-    fileItem.addEventListener('drop', handleDrop);
-    fileItem.addEventListener('dragend', handleDragEnd);
-    // 创建图标 - 确保垂直居中
+    
+    // 添加拖拽相关的属性和类
+    fileItem.draggable = true;
+    fileItem.dataset.index = index;
+    
+    // 创建图标元素
     const fileIcon = document.createElement('div');
     fileIcon.className = 'file-icon';
-    // 设置图标 - 检查是否是文件夹或路径名称包含文件夹标志
-    const isFolder = file.is_dir === true || 
-                   (typeof file.path === 'string' && 
-                    (file.path.endsWith('\\') || file.path.endsWith('/')));
     
-    // 将当前文件的详细信息记录到控制台，方便调试
-    console.log(`文件项${index}: `, {
-      path: file.path,
-      filename: file.filename || file.name,
-      is_dir: file.is_dir,
-      isFolder: isFolder
-    });
+    // 检查是否是文件夹
+    const isFolder = file.is_dir === true;
     
-    if (isFolder) {
-      // 不再使用固定的文件夹图标样式，而是获取系统图标
+    // 处理图标 - 特殊处理LNK文件
+    const isLnkFile = file.path.toLowerCase().endsWith('.lnk');
+    if (isLnkFile) {
+      console.log(`处理LNK文件图标: ${file.path}`);
+      
+      // 如果后端已经提供了图标数据，直接使用
       if (file.icon) {
-        // 如果后端已经提供了图标数据，直接使用
+        console.log(`后端已提供LNK图标: ${file.path}`);
         fileIcon.style.backgroundImage = `url('${file.icon}')`;
       } else {
-        // 尝试通过API获取文件夹图标
+        // 使用专门的LNK图标获取函数
+        getLnkIcon(file.path).then(iconPath => {
+          if (iconPath) {
+            console.log(`成功获取LNK图标: ${file.path}`);
+            fileIcon.style.backgroundImage = `url('${iconPath}')`;
+          } else {
+            console.log(`无法获取LNK图标，使用默认图标: ${file.path}`);
+            fileIcon.style.backgroundColor = '#f0f0f0';
+            fileIcon.innerHTML = '<span style="font-size: 18px;">?</span>';
+            fileIcon.style.display = 'flex';
+            fileIcon.style.justifyContent = 'center';
+            fileIcon.style.alignItems = 'center';
+          }
+        }).catch(err => {
+          console.error(`LNK图标处理错误: ${err}`);
+          fileIcon.style.backgroundColor = '#f0f0f0';
+          fileIcon.innerHTML = '<span style="font-size: 18px;">!</span>';
+          fileIcon.style.display = 'flex';
+          fileIcon.style.justifyContent = 'center';
+          fileIcon.style.alignItems = 'center';
+        });
+      }
+    } else if (isFolder) {
+      // 文件夹处理保持不变
+      if (file.icon) {
+        fileIcon.style.backgroundImage = `url('${file.icon}')`;
+      } else {
         getFileIcon(file.path).then(iconPath => {
           if (iconPath) {
             fileIcon.style.backgroundImage = `url('${iconPath}')`;
           } else {
-            // 如果获取失败，使用默认文件夹图标作为备选
             fileIcon.innerHTML = '📁';
             fileIcon.style.display = 'flex';
             fileIcon.style.justifyContent = 'center';
@@ -750,7 +770,6 @@ function updateFileListUI() {
           }
         }).catch(err => {
           console.error('获取文件夹图标失败:', err);
-          // 获取失败时使用默认图标
           fileIcon.innerHTML = '📁';
           fileIcon.style.display = 'flex';
           fileIcon.style.justifyContent = 'center';
@@ -851,14 +870,41 @@ async function getFileIcon(filePath) {
       return null;
     }
     
+    console.log(`尝试获取图标: ${filePath}`);
+    
     // 通过IPC请求主进程获取图标
     const iconBase64 = await window.electronAPI.ipcInvoke('get-file-icon', filePath);
     if (iconBase64) {
+      console.log(`主进程成功获取图标: ${filePath}`);
       return `data:image/png;base64,${iconBase64}`;
     }
     
     // 如果主进程无法获取图标，尝试通过API获取
     try {
+      const isLnkFile = filePath.toLowerCase().endsWith('.lnk');
+      console.log(`尝试通过API获取图标, 是否LNK文件: ${isLnkFile}`);
+      
+      // 对于.lnk文件，可以尝试使用测试路由来调试
+      if (isLnkFile) {
+        console.log(`尝试使用测试路由获取LNK图标: ${filePath}`);
+        try {
+          const testResponse = await axios.get(`${API_BASE_URL}/test/lnk-icon`, {
+            params: { path: filePath },
+            responseType: 'json'
+          });
+          
+          if (testResponse.data && testResponse.data.success && testResponse.data.data) {
+            console.log(`测试路由成功获取LNK图标: ${filePath}`);
+            return `data:image/png;base64,${testResponse.data.data}`;
+          } else {
+            console.log(`测试路由无法获取LNK图标: ${filePath}, 原因: ${testResponse.data.message}`);
+          }
+        } catch (testErr) {
+          console.error(`测试路由获取LNK图标失败: ${testErr}`);
+        }
+      }
+      
+      // 使用标准图标API
       const response = await axios.get(`${API_BASE_URL}/file/icon`, {
         params: { path: filePath },
         responseType: 'json'
@@ -866,17 +912,20 @@ async function getFileIcon(filePath) {
       
       // 如果服务器返回了图标，使用返回的Base64数据
       if (response.data && response.data.success && response.data.data) {
+        console.log(`API成功获取图标: ${filePath}`);
         return `data:image/png;base64,${response.data.data}`;
+      } else {
+        console.log(`API无法获取图标: ${filePath}, 原因: ${response.data ? response.data.message : '未知'}`);
       }
     } catch (err) {
-      console.error('API获取图标失败:', err);
+      console.error(`API获取图标失败: ${err}`);
     }
     
     // 如果没有图标数据，返回null
     console.error(`无法获取图标: ${filePath}`);
     return null;
   } catch (error) {
-    console.error('获取文件图标失败:', error);
+    console.error(`获取文件图标失败: ${error}`);
     return null;
   }
 }
@@ -2681,4 +2730,27 @@ if (updateTip) {
   updateTip.onclick = () => {
     if (cachedUpdateResult) showUpdateDialog(cachedUpdateResult);
   };
+}
+
+// 处理LNK文件图标的特殊函数
+async function getLnkIcon(filePath) {
+  console.log(`使用特殊方法获取LNK图标: ${filePath}`);
+  try {
+    // 使用测试路由获取LNK图标
+    const response = await axios.get(`${API_BASE_URL}/test/lnk-icon`, {
+      params: { path: filePath },
+      responseType: 'json'
+    });
+    
+    if (response.data && response.data.success && response.data.data) {
+      console.log(`测试路由成功获取LNK图标: ${filePath}`);
+      return `data:image/png;base64,${response.data.data}`;
+    } else {
+      console.log(`测试路由无法获取LNK图标: ${filePath}, 原因: ${response.data.message}`);
+      return null;
+    }
+  } catch (err) {
+    console.error(`LNK图标获取失败: ${err}`);
+    return null;
+  }
 }

@@ -923,6 +923,102 @@ def get_system_icon():
             "message": f"获取系统图标时出错: {str(e)}"
         }), 500
 
+# 测试路由 - 显示测试页面
+@app.route('/test-lnk-icon', methods=['GET'])
+def test_lnk_icon_page():
+    """显示测试LNK图标的HTML页面"""
+    html = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>测试LNK图标</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            .test-form { margin-bottom: 20px; }
+            .result { margin-top: 20px; padding: 10px; border: 1px solid #ccc; }
+            .icon-display { margin-top: 10px; background-color: #f0f0f0; padding: 10px; border-radius: 4px; }
+        </style>
+        <script>
+            async function testIcon() {
+                const pathInput = document.getElementById('file-path');
+                const resultDiv = document.getElementById('result');
+                const iconDiv = document.getElementById('icon-display');
+                
+                const path = pathInput.value.trim();
+                if (!path) {
+                    resultDiv.textContent = '请输入文件路径';
+                    return;
+                }
+                
+                try {
+                    resultDiv.textContent = '正在获取图标...';
+                    const response = await fetch(`/api/test/lnk-icon?path=${encodeURIComponent(path)}`);
+                    const data = await response.json();
+                    
+                    resultDiv.textContent = data.message;
+                    
+                    if (data.success && data.data) {
+                        iconDiv.innerHTML = `<img src="data:image/png;base64,${data.data}" style="width:64px; height:64px;" />`;
+                    } else {
+                        iconDiv.innerHTML = '无法显示图标';
+                    }
+                } catch (error) {
+                    resultDiv.textContent = `错误: ${error.message}`;
+                }
+            }
+        </script>
+    </head>
+    <body>
+        <h1>测试LNK文件图标获取</h1>
+        <div class="test-form">
+            <label for="file-path">LNK文件路径:</label>
+            <input type="text" id="file-path" style="width: 500px;" placeholder="输入完整的.lnk文件路径" />
+            <button onclick="testIcon()">测试</button>
+        </div>
+        <div class="result" id="result">输入LNK文件路径并点击测试按钮</div>
+        <div class="icon-display" id="icon-display"></div>
+    </body>
+    </html>
+    """
+    return html
+
+# 测试路由 - 单独测试lnk图标获取
+@app.route('/api/test/lnk-icon', methods=['GET'])
+def test_lnk_icon():
+    """测试获取lnk文件图标的功能"""
+    try:
+        # 获取文件路径参数
+        file_path = request.args.get('path')
+        if not file_path:
+            return jsonify({'success': False, 'message': '缺少文件路径参数', 'data': None})
+        
+        if not file_path.lower().endswith('.lnk'):
+            return jsonify({'success': False, 'message': '不是LNK文件', 'data': None})
+            
+        if not os.path.exists(file_path):
+            return jsonify({'success': False, 'message': '文件不存在', 'data': None})
+        
+        # 尝试获取LNK文件图标
+        print(f"测试获取LNK图标: {file_path}")
+        icon_data = system_manager.get_lnk_icon(file_path)
+        
+        if icon_data:
+            print(f"成功获取LNK图标，大小: {len(icon_data)} 字节")
+            base64_data = base64.b64encode(icon_data).decode('utf-8')
+            return jsonify({
+                'success': True, 
+                'message': '成功获取图标数据', 
+                'data': base64_data,
+                'html': f'<img src="data:image/png;base64,{base64_data}" />'
+            })
+        else:
+            print("无法获取LNK图标")
+            return jsonify({'success': False, 'message': '无法获取图标数据', 'data': None})
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'测试LNK图标时出错: {str(e)}', 'data': None})
+
 def start_server():
     """启动Flask服务器"""
     # 确保控制台输出使用UTF-8编码

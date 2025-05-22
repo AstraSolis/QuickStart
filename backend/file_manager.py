@@ -660,58 +660,46 @@ class FileManager:
             return None
             
     def get_files_with_icons(self) -> List[Dict[str, Any]]:
-        """
-        获取带有图标的文件列表
-        
-        Returns:
-            包含图标信息的文件列表
-        """
+        """获取带有图标的文件列表"""
         try:
-            if not self.system_manager:
-                logger.error("系统管理器未初始化，无法获取快捷方式图标")
-                return []
-                
-            files = self.config_manager.get("files", [])
+            # 获取文件列表
+            file_list = self.config_manager.get("files", [])
+            
+            # 转换为包含图标的文件列表
             files_with_icons = []
             
-            for file_info in files:
+            for file_info in file_list:
                 file_path = file_info["path"]
                 
-                # 确保文件信息包含filename字段
-                if "filename" not in file_info or not file_info["filename"]:
-                    filename = os.path.basename(file_path)
-                    file_info["filename"] = filename
-                else:
-                    # 移除不必要的打印
-                    pass
-                
-                # 确保文件夹状态正确
-                is_dir = os.path.isdir(file_path) if os.path.exists(file_path) else False
-                file_info["is_dir"] = is_dir
-                    
-                # 如果没有name字段(兼容旧版本)，也设置它
-                if "name" not in file_info or not file_info["name"]:
-                    file_info["name"] = file_info["filename"]
-                    
+                # 默认图标为空
                 icon_data = None
                 
                 # 获取文件图标，无需详细日志
                 try:
                     if file_path.lower().endswith('.url'):
+                        print(f"处理URL文件图标: {file_path}")
                         icon_bytes = self.system_manager.get_url_icon(file_path)
                         if icon_bytes:
+                            print(f"获取到URL文件图标: {file_path}")
                             icon_data = f"data:image/png;base64,{base64.b64encode(icon_bytes).decode('utf-8')}"
                     elif file_path.lower().endswith('.lnk'):
+                        print(f"处理LNK文件图标: {file_path}")
                         icon_bytes = self.system_manager.get_lnk_icon(file_path)
                         if icon_bytes:
+                            print(f"获取到LNK文件图标: {file_path}，大小: {len(icon_bytes)} 字节")
                             icon_data = f"data:image/png;base64,{base64.b64encode(icon_bytes).decode('utf-8')}"
+                        else:
+                            print(f"LNK文件图标获取失败: {file_path}")
                     
                     # 如果上面的特殊处理失败或不是特殊文件类型，使用通用方法
                     if not icon_data:
+                        print(f"使用通用方法获取图标: {file_path}")
                         icon_data = self.get_file_icon(file_path)
+                        print(f"通用方法获取图标结果: {file_path}, 成功: {icon_data is not None}")
                 except Exception as e:
                     # 只记录图标获取失败，但不影响流程
                     logger.error(f"获取图标失败: {str(e)}")
+                    print(f"获取图标失败: {file_path}, 错误: {str(e)}")
                 
                 # 创建包含图标的文件信息副本
                 file_with_icon = file_info.copy()
@@ -733,6 +721,7 @@ class FileManager:
             # 确保文件存在
             if not os.path.exists(file_path):
                 logger.error(f"文件不存在: {file_path}")
+                print(f"文件不存在: {file_path}")
                 return None
             
             # 根据文件类型处理不同的图标获取方式
@@ -741,6 +730,7 @@ class FileManager:
             # 处理URL文件
             if file_ext == '.url':
                 try:
+                    print(f"处理URL文件图标(get_file_icon_data): {file_path}")
                     # 解析URL文件中的IconFile行
                     import configparser
                     config = configparser.ConfigParser()
@@ -758,49 +748,75 @@ class FileManager:
                     
                 except Exception as e:
                     logger.error(f"处理URL文件图标时出错: {str(e)}")
+                    print(f"处理URL文件图标时出错: {str(e)}")
                     return self.get_system_icon(file_ext[1:] if file_ext.startswith('.') else file_ext)
             
-            # 处理可执行文件和快捷方式
-            elif file_ext in ['.exe', '.lnk', '.ico']:
-                import win32api
-                import win32con
-                import win32ui
-                import win32gui
-                
+            # 处理LNK文件 - 使用system_manager的专用方法
+            elif file_ext == '.lnk':
                 try:
-                    # 获取大图标句柄
-                    large, small = win32gui.ExtractIconEx(file_path, 0)
-                    if large:
-                        # 将图标转换为位图
-                        hdc = win32ui.CreateDCFromHandle(win32gui.GetDC(0))
-                        hbmp = win32ui.CreateBitmap()
-                        hbmp.CreateCompatibleBitmap(hdc, 32, 32)
-                        
-                        hdc2 = hdc.CreateCompatibleDC()
-                        hdc2.SelectObject(hbmp)
-                        hdc2.DrawIcon((0, 0), large[0])
-                        
-                        # 将位图转换为字节数据
-                        bmpstr = hbmp.GetBitmapBits(True)
-                        
-                        # 清理资源
-                        win32gui.DestroyIcon(large[0])
-                        if small:
-                            win32gui.DestroyIcon(small[0])
-                        hdc.DeleteDC()
-                        hdc2.DeleteDC()
-                        
-                        # 转换为Base64
-                        if bmpstr:
-                            return base64.b64encode(bmpstr).decode('utf-8')
+                    print(f"处理LNK文件图标(get_file_icon_data): {file_path}")
+                    if self.system_manager:
+                        icon_bytes = self.system_manager.get_lnk_icon(file_path)
+                        if icon_bytes:
+                            print(f"获取到LNK文件图标: {file_path}, 大小: {len(icon_bytes)} 字节")
+                            return base64.b64encode(icon_bytes).decode('utf-8')
+                    
+                    print(f"专用方法无法获取LNK图标，尝试通用方法: {file_path}")
+                    # 如果system_manager的方法失败，尝试通用方法
                 except Exception as e:
-                    logger.error(f"获取图标错误: {str(e)}")
+                    logger.error(f"处理LNK文件图标时出错: {str(e)}")
+                    print(f"处理LNK文件图标时出错: {str(e)}")
+            
+            # 处理可执行文件和其他文件类型
+            print(f"使用通用方法处理文件图标: {file_path}")
+            import win32api
+            import win32con
+            import win32ui
+            import win32gui
+            
+            try:
+                # 获取大图标句柄
+                large, small = win32gui.ExtractIconEx(file_path, 0)
+                if large:
+                    print(f"成功提取图标: {file_path}")
+                    # 将图标转换为位图
+                    hdc = win32ui.CreateDCFromHandle(win32gui.GetDC(0))
+                    hbmp = win32ui.CreateBitmap()
+                    hbmp.CreateCompatibleBitmap(hdc, 32, 32)
+                    
+                    hdc2 = hdc.CreateCompatibleDC()
+                    hdc2.SelectObject(hbmp)
+                    hdc2.DrawIcon((0, 0), large[0])
+                    
+                    # 将位图转换为字节数据
+                    bmpstr = hbmp.GetBitmapBits(True)
+                    
+                    # 清理资源
+                    win32gui.DestroyIcon(large[0])
+                    if small:
+                        win32gui.DestroyIcon(small[0])
+                    hdc.DeleteDC()
+                    hdc2.DeleteDC()
+                    
+                    # 转换为Base64
+                    if bmpstr:
+                        print(f"成功转换图标为Base64: {file_path}")
+                        return base64.b64encode(bmpstr).decode('utf-8')
+                    else:
+                        print(f"位图数据为空: {file_path}")
+                else:
+                    print(f"无法提取图标: {file_path}")
+            except Exception as e:
+                logger.error(f"获取图标错误: {str(e)}")
+                print(f"获取图标错误: {str(e)}")
             
             # 使用默认方式获取图标
+            print(f"尝试使用系统图标: {file_path}")
             return self.get_system_icon(file_ext[1:] if file_ext.startswith('.') else file_ext)
             
         except Exception as e:
             logger.error(f"获取文件图标数据失败: {str(e)}")
+            print(f"获取文件图标数据失败: {str(e)}")
             return None
 
     def get_system_icon(self, file_type):
