@@ -11,6 +11,7 @@ from typing import Dict, Any, List, Optional
 import base64
 import urllib.parse
 import logging
+import datetime
 
 # 第三方库导入
 from flask import Flask, request, jsonify
@@ -32,17 +33,17 @@ from languages import LanguageManager
 # 配置日志记录器
 logger = logging.getLogger(__name__)
 logging.basicConfig(
-    level=logging.ERROR,  # 将日志级别提高到ERROR
-    format='%(levelname)s: %(message)s'
+    level=logging.DEBUG,  # 将日志级别提高到DEBUG
+    format='%(asctime)s - %(levelname)s: %(message)s'
 )
 
 # 减少Flask的日志输出
-logging.getLogger('werkzeug').setLevel(logging.ERROR)
+logging.getLogger('werkzeug').setLevel(logging.INFO)
 
 # 设置其他模块的日志级别
-logging.getLogger('file_manager').setLevel(logging.ERROR)
-logging.getLogger('system_manager').setLevel(logging.ERROR)
-logging.getLogger('config_manager').setLevel(logging.ERROR)
+logging.getLogger('file_manager').setLevel(logging.DEBUG)
+logging.getLogger('system_manager').setLevel(logging.DEBUG)
+logging.getLogger('config_manager').setLevel(logging.DEBUG)
 
 # 创建Flask应用
 app = Flask(__name__)
@@ -1019,6 +1020,192 @@ def test_lnk_icon():
         traceback.print_exc()
         return jsonify({'success': False, 'message': f'测试LNK图标时出错: {str(e)}', 'data': None})
 
+@app.route('/api/clear-icon-cache', methods=['POST'])
+def clear_icon_cache():
+    """清理图标缓存"""
+    try:
+        # 简单记录日志
+        logger.info("接收到清理图标缓存请求")
+        
+        # 检查管理器对象
+        fm_status = "有效" if 'file_manager' in globals() and file_manager is not None else "无效"
+        sm_status = "有效" if 'system_manager' in globals() and system_manager is not None else "无效"
+        logger.info(f"文件管理器状态: {fm_status}, 系统管理器状态: {sm_status}")
+        
+        # 简化的清理逻辑
+        cleared = []
+        
+        # 尝试清理文件管理器缓存
+        if 'file_manager' in globals() and file_manager is not None:
+            # 如果缓存属性不存在，创建一个空字典
+            if not hasattr(file_manager, '_icon_cache'):
+                file_manager._icon_cache = {}
+                cleared.append("已创建文件管理器缓存")
+            else:
+                # 清空现有缓存
+                old_size = len(file_manager._icon_cache) if isinstance(file_manager._icon_cache, dict) else '未知'
+                file_manager._icon_cache = {}
+                cleared.append(f"已清理文件管理器缓存({old_size}项)")
+        
+        # 尝试清理系统管理器缓存
+        if 'system_manager' in globals() and system_manager is not None:
+            # 如果缓存属性不存在，创建一个空字典
+            if not hasattr(system_manager, '_icon_cache'):
+                system_manager._icon_cache = {}
+                cleared.append("已创建系统管理器缓存")
+            else:
+                # 清空现有缓存
+                old_size = len(system_manager._icon_cache) if isinstance(system_manager._icon_cache, dict) else '未知'
+                system_manager._icon_cache = {}
+                cleared.append(f"已清理系统管理器缓存({old_size}项)")
+                
+            # 同样处理LNK图标缓存
+            if not hasattr(system_manager, '_lnk_icon_cache'):
+                system_manager._lnk_icon_cache = {}
+                cleared.append("已创建系统管理器LNK缓存")
+            else:
+                old_size = len(system_manager._lnk_icon_cache) if isinstance(system_manager._lnk_icon_cache, dict) else '未知'
+                system_manager._lnk_icon_cache = {}
+                cleared.append(f"已清理系统管理器LNK缓存({old_size}项)")
+        
+        # 强制进行垃圾回收
+        try:
+            import gc
+            gc.collect()
+            cleared.append("执行了垃圾回收")
+        except:
+            pass
+        
+        # 返回成功结果
+        result_text = "、".join(cleared) if cleared else "无缓存需要清理"
+        logger.info(f"图标缓存清理成功: {result_text}")
+        
+        return jsonify({
+            "success": True,
+            "message": f"图标缓存已清理: {result_text}，请刷新文件列表以重新加载图标",
+            "cleared": cleared
+        }), 200
+        
+    except Exception as e:
+        # 记录详细错误信息
+        import traceback
+        error_trace = traceback.format_exc()
+        logger.error(f"清理图标缓存失败: {str(e)}")
+        logger.error(error_trace)
+        
+        return jsonify({
+            "success": False,
+            "message": f"清理图标缓存失败: {str(e)}",
+            "error_trace": error_trace
+        }), 500
+
+@app.route('/api/diagnostics/icon-cache', methods=['GET'])
+def diagnose_icon_cache():
+    """显示图标缓存的诊断信息"""
+    try:
+        diagnostics = {
+            "success": True,
+            "file_manager": {
+                "initialized": 'file_manager' in globals() and file_manager is not None,
+                "has_icon_cache": hasattr(file_manager, '_icon_cache') if 'file_manager' in globals() and file_manager is not None else False,
+                "icon_cache_type": str(type(file_manager._icon_cache)) if 'file_manager' in globals() and file_manager is not None and hasattr(file_manager, '_icon_cache') else "N/A",
+                "icon_cache_size": len(file_manager._icon_cache) if 'file_manager' in globals() and file_manager is not None and hasattr(file_manager, '_icon_cache') else 0,
+                "icon_cache_keys": list(file_manager._icon_cache.keys())[:10] if 'file_manager' in globals() and file_manager is not None and hasattr(file_manager, '_icon_cache') else []
+            },
+            "system_manager": {
+                "initialized": 'system_manager' in globals() and system_manager is not None,
+                "has_icon_cache": hasattr(system_manager, '_icon_cache') if 'system_manager' in globals() and system_manager is not None else False,
+                "icon_cache_type": str(type(system_manager._icon_cache)) if 'system_manager' in globals() and system_manager is not None and hasattr(system_manager, '_icon_cache') else "N/A", 
+                "icon_cache_size": len(system_manager._icon_cache) if 'system_manager' in globals() and system_manager is not None and hasattr(system_manager, '_icon_cache') else 0,
+                "has_lnk_icon_cache": hasattr(system_manager, '_lnk_icon_cache') if 'system_manager' in globals() and system_manager is not None else False,
+                "lnk_icon_cache_size": len(system_manager._lnk_icon_cache) if 'system_manager' in globals() and system_manager is not None and hasattr(system_manager, '_lnk_icon_cache') else 0
+            },
+            "config": {
+                "remove_arrow": config_manager.get("remove_arrow", False) if 'config_manager' in globals() and config_manager is not None else "N/A"
+            }
+        }
+        
+        return jsonify(diagnostics), 200
+    except Exception as e:
+        import traceback
+        error_traceback = traceback.format_exc()
+        return jsonify({
+            "success": False,
+            "message": f"获取诊断信息失败: {str(e)}",
+            "traceback": error_traceback
+        }), 500
+
+@app.route('/api/test', methods=['GET'])
+def test_api():
+    """简单的测试API，验证服务器是否正常响应"""
+    return jsonify({
+        "success": True,
+        "message": "API服务器正常运行",
+        "time": str(datetime.datetime.now())
+    }), 200
+
+@app.route('/api/clear-icon-cache-simple', methods=['POST'])
+def clear_icon_cache_simple():
+    """简单版清理图标缓存 - 重建管理器对象"""
+    try:
+        global file_manager, system_manager
+        
+        # 确保配置管理器存在
+        if 'config_manager' in globals() and config_manager is not None:
+            # 重新创建系统管理器
+            new_system_manager = SystemManager(config_manager)
+            # 给系统管理器添加缓存属性
+            new_system_manager._icon_cache = {}
+            new_system_manager._lnk_icon_cache = {}
+            
+            # 重新创建文件管理器
+            new_file_manager = FileManager(config_manager, new_system_manager)
+            # 给文件管理器添加缓存属性
+            new_file_manager._icon_cache = {}
+            
+            # 替换全局变量
+            system_manager = new_system_manager
+            file_manager = new_file_manager
+            
+            logger.info("已重建管理器对象并清理图标缓存")
+            
+            return jsonify({
+                "success": True,
+                "message": "已重建管理器对象并清理图标缓存，请刷新文件列表"
+            }), 200
+        else:
+            return jsonify({
+                "success": False,
+                "message": "配置管理器未初始化，无法重建对象"
+            }), 500
+    except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        logger.error(f"重建管理器对象失败: {str(e)}")
+        logger.error(error_trace)
+        
+        return jsonify({
+            "success": False,
+            "message": f"重建管理器对象失败: {str(e)}"
+        }), 500
+
+# 添加全局错误处理器
+@app.errorhandler(Exception)
+def handle_exception(e):
+    """处理所有未捕获的异常"""
+    # 记录异常
+    logger.error(f"未捕获的异常: {str(e)}")
+    import traceback
+    logger.error(traceback.format_exc())
+    
+    # 返回JSON格式的错误响应
+    response = {
+        "success": False,
+        "message": f"服务器错误: {str(e)}",
+        "error_type": e.__class__.__name__
+    }
+    return jsonify(response), 500
+
 def start_server():
     """启动Flask服务器"""
     # 确保控制台输出使用UTF-8编码
@@ -1037,6 +1224,18 @@ def start_server():
             port = int(sys.argv[1])
         except ValueError:
             print(f"无效的端口号: {sys.argv[1]}，使用默认端口 5000")
+    
+    # 打印启动信息
+    print(f"\n{'='*40}")
+    print(f"启动QuickStart服务器，版本: {config_manager.get('version', '1.0.0')}")
+    print(f"主机: {host}, 端口: {port}")
+    print(f"系统: {sys.platform}")
+    print(f"Python版本: {sys.version}")
+    print(f"缓存管理器状态:")
+    print(f" - 文件管理器: {'已初始化' if 'file_manager' in globals() and file_manager is not None else '未初始化'}")
+    print(f" - 系统管理器: {'已初始化' if 'system_manager' in globals() and system_manager is not None else '未初始化'}")
+    print(f" - 配置管理器: {'已初始化' if 'config_manager' in globals() and config_manager is not None else '未初始化'}")
+    print(f"{'='*40}\n")
     
     app.run(host=host, port=port, debug=False)
 

@@ -452,6 +452,30 @@
     </div>
   </div>
   
+  <!-- 重置选项对话框 -->
+  <div id="reset-options-dialog" class="dialog" style="display:none;z-index:2500;">
+    <div class="dialog-content" style="width:350px;max-width:95%;padding:20px 16px 16px 16px;">
+      <h2 id="reset-options-title" style="margin-top:0;margin-bottom:12px;font-size:16px;font-weight:600;text-align:left;">重置选项</h2>
+      <p style="margin-bottom:15px;font-size:13px;color:#666;">请选择需要重置的内容：</p>
+      
+      <div class="reset-options-list" style="margin-bottom:20px;">
+        <div class="form-group reset-option">
+          <input type="checkbox" id="reset-config-checkbox" checked>
+          <label for="reset-config-checkbox" style="flex:1;margin-left:8px;font-size:14px;">配置文件</label>
+        </div>
+        <div class="form-group reset-option">
+          <input type="checkbox" id="reset-icon-cache-checkbox" checked>
+          <label for="reset-icon-cache-checkbox" style="flex:1;margin-left:8px;font-size:14px;">清理图标缓存</label>
+        </div>
+      </div>
+      
+      <div class="dialog-footer" style="display:flex;justify-content:flex-end;gap:12px;margin-top:15px;">
+        <button id="reset-options-cancel" class="btn" style="min-width:70px;">取消</button>
+        <button id="reset-options-confirm" class="btn danger" style="min-width:80px;background-color:#e74c3c;color:white;">确认</button>
+      </div>
+    </div>
+  </div>
+  
   <!-- 更新日志弹窗 -->
   <div id="update-log-dialog" class="dialog" style="display:none;z-index:3000;">
     <div class="dialog-content" style="width:420px;max-width:95%;padding:22px 18px 18px 18px;">

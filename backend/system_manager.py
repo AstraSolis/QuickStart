@@ -38,6 +38,9 @@ class SystemManager:
         """初始化系统管理器"""
         # 保存配置管理器引用
         self.config_manager = config_manager
+        # 初始化图标缓存
+        self._icon_cache = {}
+        self._lnk_icon_cache = {}
         # 不再需要QFileIconProvider
         pass
     

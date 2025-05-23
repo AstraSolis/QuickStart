@@ -138,6 +138,7 @@ function cacheDOM() {
     settingsSaveBtn: document.getElementById('settings-save-btn'),
     settingsCancelBtn: document.getElementById('settings-cancel-btn'),
     resetAllBtn: document.getElementById('reset-all-btn'),
+    // clearIconCacheBtn: document.getElementById('clear-icon-cache-btn'), // 移除旧的清理图标缓存按钮引用
     versionLabel: document.getElementById('version-label'),
     versionValue: document.getElementById('version-value'),
     loadingOverlay: document.getElementById('loading-overlay'),
@@ -158,6 +159,12 @@ function cacheDOM() {
     // 设置选项卡
     settingsTabs: document.querySelectorAll('.tab-button'),
     settingsTabContents: document.querySelectorAll('.tab-content'),
+    // 添加重置选项对话框元素
+    resetOptionsDialog: document.getElementById('reset-options-dialog'),
+    resetConfigCheckbox: document.getElementById('reset-config-checkbox'),
+    resetIconCacheCheckbox: document.getElementById('reset-icon-cache-checkbox'),
+    resetOptionsConfirmBtn: document.getElementById('reset-options-confirm'),
+    resetOptionsCancelBtn: document.getElementById('reset-options-cancel'),
     checkUpdateBtn: document.getElementById('check-update-btn'),
     versionText: document.getElementById('version-text'),
   };
@@ -184,8 +191,22 @@ function bindEvents() {
   
   // 设置对话框重置按钮点击事件
   if (DOM.resetAllBtn) {
-    DOM.resetAllBtn.addEventListener('click', resetAll);
+    DOM.resetAllBtn.addEventListener('click', openResetOptionsDialog);
   }
+  
+  // 重置选项对话框按钮事件
+  if (DOM.resetOptionsConfirmBtn) {
+    DOM.resetOptionsConfirmBtn.addEventListener('click', performResetActions);
+  }
+  
+  if (DOM.resetOptionsCancelBtn) {
+    DOM.resetOptionsCancelBtn.addEventListener('click', closeResetOptionsDialog);
+  }
+  
+  // 移除旧的清理图标缓存按钮事件
+  // if (DOM.clearIconCacheBtn) {
+  //   DOM.clearIconCacheBtn.addEventListener('click', clearIconCache);
+  // }
   
   // 自定义输入对话框按钮事件
   DOM.inputDialogConfirm.addEventListener('click', confirmInputDialog);
@@ -264,7 +285,7 @@ function bindEvents() {
   }
 
   // 重置应用
-  DOM.resetAllBtn.addEventListener('click', resetAll);
+  // DOM.resetAllBtn.addEventListener('click', resetAll);
 
   // 设置标签切换
   DOM.settingsTabs.forEach(tab => {
@@ -473,6 +494,12 @@ ${t('support_drag_drop')}`;
   if (minimizeToTrayLabel) minimizeToTrayLabel.textContent = t('minimize_to_tray');
   const configPathLabel = document.getElementById('config-path-label');
   if (configPathLabel) configPathLabel.textContent = t('config_path') || '配置文件位置';
+  
+  // 图标缓存
+  const iconCacheLabel = document.getElementById('icon-cache-label');
+  if (iconCacheLabel) iconCacheLabel.textContent = t('icon_cache') || '图标缓存';
+  const clearIconCacheBtn = document.getElementById('clear-icon-cache-btn');
+  if (clearIconCacheBtn) clearIconCacheBtn.textContent = t('clear_cache') || '清理缓存';
   
   // 重置按钮
   const resetBtn = document.querySelector('#reset-all-btn');
@@ -2225,37 +2252,196 @@ function hideLoading() {
 
 // 添加重置所有设置和文件的逻辑
 function resetAll() {
-  // 显示确认对话框，确保用户真的想要重置所有设置和文件
+  // 调用新的重置选项对话框
+  openResetOptionsDialog();
+}
+
+// 打开重置选项对话框
+function openResetOptionsDialog() {
+  // 默认勾选所有选项
+  if (DOM.resetConfigCheckbox) {
+    DOM.resetConfigCheckbox.checked = true;
+  }
+  
+  if (DOM.resetIconCacheCheckbox) {
+    DOM.resetIconCacheCheckbox.checked = true;
+  }
+  
+  // 显示对话框
+  if (DOM.resetOptionsDialog) {
+    DOM.resetOptionsDialog.style.display = 'block';
+  }
+}
+
+// 关闭重置选项对话框
+function closeResetOptionsDialog() {
+  if (DOM.resetOptionsDialog) {
+    DOM.resetOptionsDialog.style.display = 'none';
+  }
+}
+
+// 执行选定的重置操作
+function performResetActions() {
+  const resetConfig = DOM.resetConfigCheckbox && DOM.resetConfigCheckbox.checked;
+  const resetIconCache = DOM.resetIconCacheCheckbox && DOM.resetIconCacheCheckbox.checked;
+  
+  // 如果没有选中任何选项，直接关闭对话框
+  if (!resetConfig && !resetIconCache) {
+    closeResetOptionsDialog();
+    return;
+  }
+  
+  // 显示确认对话框以最终确认
   const confirmTitle = translations['reset_confirm_title'] || '确认重置';
-  const confirmMessage = translations['reset_confirm_message'] || '确定要重置所有设置和文件吗？此操作将删除所有配置和文件列表，无法恢复！';
+  
+  // 根据选择的选项自定义确认消息
+  let confirmMessage = '';
+  if (resetConfig && resetIconCache) {
+    // 两者都选中
+    confirmMessage = translations['reset_confirm_all'] || '确定要重置配置文件和清理图标缓存吗？此操作将删除所有配置和文件列表，无法恢复！';
+  } else if (resetConfig) {
+    // 只选中配置文件
+    confirmMessage = translations['reset_confirm_config'] || '确定要重置配置文件吗？此操作将删除所有配置和文件列表，无法恢复！';
+  } else if (resetIconCache) {
+    // 只选中清理图标缓存
+    confirmMessage = translations['reset_confirm_icon_cache'] || '确定要清理图标缓存吗？此操作将重新加载所有文件图标。';
+  }
   
   // 使用美观的自定义对话框代替原生confirm
   showCustomConfirmDialog(confirmTitle, confirmMessage, () => {
     showLoading();
     
-    // 调用后端API进行重置
-    axios.post(`${API_BASE_URL}/reset`)
-      .then(response => {
-        if (response.data.success) {
-          // 关闭设置对话框
-          closeSettingsDialog();
+    // 关闭重置选项对话框
+    closeResetOptionsDialog();
+    
+    // 执行选中的操作
+    const promises = [];
+    
+    // 重置配置文件
+    if (resetConfig) {
+      const resetConfigPromise = axios.post(`${API_BASE_URL}/reset`)
+        .then(response => {
+          if (response.data.success) {
+            return { type: 'config', success: true, message: response.data.message || '配置文件已重置' };
+          } else {
+            return { type: 'config', success: false, message: response.data.message || '配置文件重置失败' };
+          }
+        })
+        .catch(error => {
+          console.error('Failed to reset settings and files:', error);
+          return { type: 'config', success: false, message: '配置文件重置失败' };
+        });
+      
+      promises.push(resetConfigPromise);
+    }
+    
+    // 清理图标缓存
+    if (resetIconCache) {
+      const clearIconCachePromise = axios.post(`${API_BASE_URL}/clear-icon-cache`)
+        .then(response => {
+          if (response.data.success) {
+            return { type: 'icon_cache', success: true, message: response.data.message || '图标缓存已清理' };
+          } else {
+            // 尝试使用简单版清理
+            return axios.post(`${API_BASE_URL}/clear-icon-cache-simple`)
+              .then(simpleResponse => {
+                if (simpleResponse.data.success) {
+                  return { type: 'icon_cache', success: true, message: simpleResponse.data.message || '使用备用方法清理了图标缓存' };
+                } else {
+                  return { type: 'icon_cache', success: false, message: simpleResponse.data.message || '图标缓存清理失败' };
+                }
+              })
+              .catch(error => {
+                console.error('Failed to clear icon cache with simple method:', error);
+                return { type: 'icon_cache', success: false, message: '图标缓存清理失败' };
+              });
+          }
+        })
+        .catch(error => {
+          console.error('Failed to clear icon cache:', error);
+          // 尝试使用简单版清理
+          return axios.post(`${API_BASE_URL}/clear-icon-cache-simple`)
+            .then(simpleResponse => {
+              if (simpleResponse.data.success) {
+                return { type: 'icon_cache', success: true, message: simpleResponse.data.message || '使用备用方法清理了图标缓存' };
+              } else {
+                return { type: 'icon_cache', success: false, message: '图标缓存清理失败' };
+              }
+            })
+            .catch(error => {
+              console.error('Failed to clear icon cache with simple method:', error);
+              return { type: 'icon_cache', success: false, message: '图标缓存清理失败' };
+            });
+        });
+      
+      promises.push(clearIconCachePromise);
+    }
+    
+    // 处理所有操作的结果
+    Promise.all(promises)
+      .then(results => {
+        hideLoading();
+        
+        // 处理结果
+        let successCount = 0;
+        let failureMessages = [];
+        
+        results.forEach(result => {
+          if (result.success) {
+            successCount++;
+          } else {
+            failureMessages.push(result.message);
+          }
+        });
+        
+        // 显示结果消息
+        if (successCount === results.length) {
+          // 全部成功
+          showMessage('重置操作已成功完成', 'success');
           
-          // 重新加载应用
-          showMessage(response.data.message || 'reset_success', 'success');
+          // 如果重置了配置文件，关闭设置对话框并重新加载设置
+          if (resetConfig) {
+            closeSettingsDialog();
+            
+            // 延迟后重新加载设置和文件列表
+            setTimeout(() => {
+              loadSettings();
+            }, 1000);
+          } 
+          // 如果只是清理了图标缓存，重新加载文件列表
+          else if (resetIconCache) {
+            setTimeout(() => {
+              loadFileList();
+            }, 1000);
+          }
+        } else if (successCount > 0) {
+          // 部分成功
+          showMessage(`部分操作成功完成，${failureMessages.join('，')}`, 'warning');
           
-          // 延迟后重新加载设置和文件列表
-          setTimeout(() => {
-            loadSettings();
-          }, 1000);
+          // 如果重置配置文件成功，重新加载设置
+          if (resetConfig && results.find(r => r.type === 'config' && r.success)) {
+            closeSettingsDialog();
+            
+            // 延迟后重新加载设置和文件列表
+            setTimeout(() => {
+              loadSettings();
+            }, 1000);
+          } 
+          // 如果只是清理图标缓存成功，重新加载文件列表
+          else if (resetIconCache && results.find(r => r.type === 'icon_cache' && r.success)) {
+            setTimeout(() => {
+              loadFileList();
+            }, 1000);
+          }
         } else {
-          hideLoading();
-          showMessage(response.data.message || '重置失败', 'error');
+          // 全部失败
+          showMessage(`所有操作均失败: ${failureMessages.join('，')}`, 'error');
         }
       })
       .catch(error => {
-        console.error('Failed to reset settings and files:', error);
         hideLoading();
-        showMessage('重置失败', 'error');
+        console.error('处理重置操作时出错:', error);
+        showMessage('处理重置操作时出错', 'error');
       });
   });
 }
@@ -2753,4 +2939,92 @@ async function getLnkIcon(filePath) {
     console.error(`LNK图标获取失败: ${err}`);
     return null;
   }
+}
+
+// 清理图标缓存
+function clearIconCache() {
+  showLoading();
+  console.log('开始清理图标缓存...');
+  
+  // 首先测试API是否可访问
+  axios.get(`${API_BASE_URL}/test`)
+    .then(testResponse => {
+      console.log('API测试成功:', testResponse.data);
+      
+      // API可访问，继续清理缓存
+      axios.post(`${API_BASE_URL}/clear-icon-cache`)
+        .then(response => {
+          hideLoading();
+          console.log('清理图标缓存响应:', response.data);
+          
+          if (response.data.success) {
+            showMessage(response.data.message || '图标缓存已清理', 'success');
+            setTimeout(() => {
+              // 延迟一秒后重新加载文件列表
+              loadFileList();
+            }, 1000);
+          } else {
+            // 标准清理失败，尝试使用简单版清理
+            console.log('标准清理失败，尝试简单版清理...');
+            trySimpleCacheClear();
+          }
+        })
+        .catch(error => {
+          console.error('清理图标缓存请求失败:', error);
+          // 出错，尝试使用简单版清理
+          trySimpleCacheClear();
+        });
+    })
+    .catch(testError => {
+      hideLoading();
+      console.error('API测试失败:', testError);
+      
+      let errorMessage = 'API服务器测试失败，无法清理图标缓存';
+      if (testError.response) {
+        errorMessage += `: ${testError.response.status} - ${testError.response.statusText || '服务器错误'}`;
+      } else if (testError.request) {
+        errorMessage += ': 服务器无响应';
+      } else {
+        errorMessage += `: ${testError.message}`;
+      }
+      
+      showMessage(errorMessage, 'error');
+    });
+}
+
+// 尝试简单版图标缓存清理
+function trySimpleCacheClear() {
+  console.log('使用简单版清理图标缓存...');
+  axios.post(`${API_BASE_URL}/clear-icon-cache-simple`)
+    .then(response => {
+      hideLoading();
+      console.log('简单版清理图标缓存响应:', response.data);
+      
+      if (response.data.success) {
+        showMessage(response.data.message || '使用备用方法清理了图标缓存', 'success');
+        setTimeout(() => {
+          // 延迟一秒后重新加载文件列表
+          loadFileList();
+        }, 1000);
+      } else {
+        showMessage(response.data.message || '所有清理方法都失败', 'error');
+      }
+    })
+    .catch(error => {
+      hideLoading();
+      console.error('简单版清理图标缓存失败:', error);
+      
+      let errorMessage = '所有清理方法都失败';
+      if (error.response) {
+        errorMessage += `: ${error.response.status} - ${
+          error.response.data.message || error.response.statusText || '服务器错误'
+        }`;
+      } else if (error.request) {
+        errorMessage += ': 服务器无响应';
+      } else {
+        errorMessage += `: ${error.message}`;
+      }
+      
+      showMessage(errorMessage, 'error');
+    });
 }

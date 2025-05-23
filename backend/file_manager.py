@@ -39,6 +39,8 @@ class FileManager:
         """
         self.config_manager = config_manager
         self.system_manager = system_manager
+        # 添加图标缓存字典
+        self._icon_cache = {}
 
     def add_files_from_list(self, file_paths: List[str]) -> List[Dict[str, Any]]:
         """
@@ -724,6 +726,11 @@ class FileManager:
                 print(f"文件不存在: {file_path}")
                 return None
             
+            # 检查缓存中是否有该图标
+            if file_path in self._icon_cache:
+                print(f"从缓存获取图标: {file_path}")
+                return self._icon_cache[file_path]
+            
             # 根据文件类型处理不同的图标获取方式
             file_ext = os.path.splitext(file_path)[1].lower()
             
@@ -741,15 +748,26 @@ class FileManager:
                         if os.path.exists(icon_file):
                             with open(icon_file, 'rb') as f:
                                 icon_data = f.read()
-                                return base64.b64encode(icon_data).decode('utf-8')
+                                icon_base64 = base64.b64encode(icon_data).decode('utf-8')
+                                # 缓存图标
+                                self._icon_cache[file_path] = icon_base64
+                                return icon_base64
                     
                     # 没有显式指定图标或找不到图标文件,使用系统方法
-                    return self.get_system_icon(file_ext[1:] if file_ext.startswith('.') else file_ext)
+                    icon_base64 = self.get_system_icon(file_ext[1:] if file_ext.startswith('.') else file_ext)
+                    if icon_base64:
+                        # 缓存图标
+                        self._icon_cache[file_path] = icon_base64
+                    return icon_base64
                     
                 except Exception as e:
                     logger.error(f"处理URL文件图标时出错: {str(e)}")
                     print(f"处理URL文件图标时出错: {str(e)}")
-                    return self.get_system_icon(file_ext[1:] if file_ext.startswith('.') else file_ext)
+                    icon_base64 = self.get_system_icon(file_ext[1:] if file_ext.startswith('.') else file_ext)
+                    if icon_base64:
+                        # 缓存图标
+                        self._icon_cache[file_path] = icon_base64
+                    return icon_base64
             
             # 处理LNK文件 - 使用system_manager的专用方法
             elif file_ext == '.lnk':
@@ -759,7 +777,10 @@ class FileManager:
                         icon_bytes = self.system_manager.get_lnk_icon(file_path)
                         if icon_bytes:
                             print(f"获取到LNK文件图标: {file_path}, 大小: {len(icon_bytes)} 字节")
-                            return base64.b64encode(icon_bytes).decode('utf-8')
+                            icon_base64 = base64.b64encode(icon_bytes).decode('utf-8')
+                            # 缓存图标
+                            self._icon_cache[file_path] = icon_base64
+                            return icon_base64
                     
                     print(f"专用方法无法获取LNK图标，尝试通用方法: {file_path}")
                     # 如果system_manager的方法失败，尝试通用方法
@@ -801,7 +822,10 @@ class FileManager:
                     # 转换为Base64
                     if bmpstr:
                         print(f"成功转换图标为Base64: {file_path}")
-                        return base64.b64encode(bmpstr).decode('utf-8')
+                        icon_base64 = base64.b64encode(bmpstr).decode('utf-8')
+                        # 缓存图标
+                        self._icon_cache[file_path] = icon_base64
+                        return icon_base64
                     else:
                         print(f"位图数据为空: {file_path}")
                 else:
@@ -812,7 +836,11 @@ class FileManager:
             
             # 使用默认方式获取图标
             print(f"尝试使用系统图标: {file_path}")
-            return self.get_system_icon(file_ext[1:] if file_ext.startswith('.') else file_ext)
+            icon_base64 = self.get_system_icon(file_ext[1:] if file_ext.startswith('.') else file_ext)
+            if icon_base64:
+                # 缓存图标
+                self._icon_cache[file_path] = icon_base64
+            return icon_base64
             
         except Exception as e:
             logger.error(f"获取文件图标数据失败: {str(e)}")

@@ -199,7 +199,37 @@ class BuildManager:
             
             # 安装 Python 依赖
             self.print_colored("安装 Python 依赖...", "blue")
-            subprocess.run([sys.executable, "-m", "pip", "install", "-r", str(requirements_path)], check=True)
+            # 读取requirements.txt内容并确保使用UTF-8编码
+            try:
+                with open(requirements_path, 'r', encoding='utf-8') as f:
+                    requirements_content = f.read()
+            except UnicodeDecodeError:
+                # 如果UTF-8读取失败，尝试使用其他编码
+                self.print_colored("警告: requirements.txt文件编码不是UTF-8，尝试使用其他编码读取...", "yellow")
+                try:
+                    with open(requirements_path, 'r', encoding='latin-1') as f:
+                        requirements_content = f.read()
+                except Exception as e:
+                    self.print_colored(f"读取requirements.txt文件失败: {str(e)}", "red")
+                    return False
+            
+            # 创建一个最小化的临时requirements文件，只包含必要的包名，不包含注释
+            packages = []
+            for line in requirements_content.splitlines():
+                line = line.strip()
+                if line and not line.startswith('#'):
+                    packages.append(line)
+            
+            # 直接使用pip安装每个包，而不是使用requirements文件
+            for package in packages:
+                self.print_colored(f"正在安装: {package}", "blue")
+                try:
+                    subprocess.run([sys.executable, "-m", "pip", "install", package], check=True)
+                except subprocess.CalledProcessError as e:
+                    self.print_colored(f"安装 {package} 失败: {str(e)}", "red")
+                    return False
+            
+            # 不再需要删除临时文件，因为我们直接安装包
             
             # 强制使用绝对路径，规避虚拟环境 PATH 问题
             npm_path = r"C:\Program Files\nodejs\npm.cmd"
