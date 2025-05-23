@@ -1431,20 +1431,39 @@ function quitApplication(skipAppQuit = false) {
     trayIcon = null;
   }
   
+  // 判断是否为打包环境
+  const isProd = app.isPackaged;
+  log(`当前环境: ${isProd ? '生产环境(打包)' : '开发环境'}`);
+  
   // 终止Python服务器进程
   if (pyProc) {
     try {
       log('正在终止Python进程...');
-      // 强制杀死进程及其子进程
+      
       if (process.platform === 'win32') {
-        const { spawn } = require('child_process');
-        // 使用同步方式确保在应用退出前完成
-        spawn('taskkill', ['/pid', pyProc.pid, '/f', '/t'], {
-          detached: true,
-          stdio: 'ignore'
-        }).unref();
-        
-        log(`已发送taskkill命令终止进程(PID: ${pyProc.pid})`);
+        if (isProd) {
+          // 打包环境 - 使用强化的终止逻辑
+          const { execSync } = require('child_process');
+          try {
+            log(`尝试通过PID终止进程(PID: ${pyProc.pid})`);
+            execSync(`taskkill /pid ${pyProc.pid} /f /t`, { timeout: 3000 });
+            log(`成功终止进程(PID: ${pyProc.pid})`);
+          } catch (err) {
+            log(`尝试通过PID终止失败: ${err.message}`);
+            // 备用方案：尝试通过映像名终止
+            try {
+              log('尝试通过映像名终止backend.exe进程');
+              execSync('taskkill /im backend.exe /f /t', { timeout: 3000 });
+              log('成功通过映像名终止backend.exe进程');
+            } catch (backendErr) {
+              log(`终止backend.exe失败: ${backendErr.message}`);
+            }
+          }
+        } else {
+          // 开发环境 - 使用简单的进程终止方式
+          pyProc.kill();
+          log(`已终止Python开发进程(PID: ${pyProc.pid})`);
+        }
       } else {
         // 非Windows平台使用SIGKILL信号
         pyProc.kill('SIGKILL');
@@ -1453,13 +1472,63 @@ function quitApplication(skipAppQuit = false) {
       log('终止Python进程失败:', error);
     }
     pyProc = null;
+  } else {
+    // 即使pyProc为空，也尝试通过映像名终止backend.exe（仅在打包环境可能存在脱离控制的进程）
+    if (process.platform === 'win32' && app.isPackaged) {
+      try {
+        const { execSync } = require('child_process');
+        log('pyProc为空，但在打包环境下仍尝试通过映像名终止backend.exe');
+        execSync('taskkill /im backend.exe /f /t', { timeout: 3000 });
+        log('成功通过映像名终止backend.exe进程');
+      } catch (err) {
+        // 如果进程不存在会抛出错误，这是可以接受的
+        log(`通过映像名终止backend.exe进程返回: ${err.message}`);
+      }
+    }
+  }
+  
+  // 使用kill-python.js脚本作为备份清理方案（仅在打包环境需要）
+  if (app.isPackaged && process.platform === 'win32') {
+    try {
+      // 尝试多个可能的路径，确保在打包环境能找到脚本
+      let killScriptPath = path.join(__dirname, '..', 'scripts', 'kill-python.js');
+      
+      // 如果找不到，尝试在资源目录下查找
+      if (!fs.existsSync(killScriptPath)) {
+        killScriptPath = path.join(process.resourcesPath, 'scripts', 'kill-python.js');
+        
+        // 如果还是找不到，尝试app.asar外的路径
+        if (!fs.existsSync(killScriptPath)) {
+          killScriptPath = path.join(process.resourcesPath, 'app.asar.unpacked', 'scripts', 'kill-python.js');
+        }
+      }
+      
+      if (fs.existsSync(killScriptPath)) {
+        log(`找到并执行Python进程清理脚本: ${killScriptPath}`);
+        const { execSync } = require('child_process');
+        execSync(`node "${killScriptPath}"`, { timeout: 5000 });
+        log('Python进程清理脚本执行完成');
+      } else {
+        log(`未找到清理脚本，使用备选方案直接终止进程`);
+        // 备选方案: 再次尝试终止所有backend.exe进程
+        try {
+          const { execSync } = require('child_process');
+          execSync('taskkill /im backend.exe /f /t', { timeout: 3000 });
+          log('使用备选方案成功终止backend.exe进程');
+        } catch (err) {
+          log(`备选方案终止进程结果: ${err.message}`);
+        }
+      }
+    } catch (error) {
+      log('执行清理脚本失败:', error);
+    }
   }
   
   // 确保在指定时间后强制退出应用
   setTimeout(() => {
     log('确保应用退出');
     process.exit(0);
-  }, 1000);
+  }, app.isPackaged ? 1500 : 1000); // 打包环境给予更长的清理时间
   
   // 如果没有指定跳过，则立即退出应用
   if (!skipAppQuit) {
@@ -1716,6 +1785,27 @@ app.on('will-quit', (event) => {
   log('应用即将退出');
   // 传入 true 表示跳过调用 app.quit()，因为这是在 will-quit 事件中
   quitApplication(true);
+});
+
+// 在应用准备退出之前处理
+app.on('before-quit', (event) => {
+  log('应用准备退出(before-quit)');
+  // 设置退出标志，确保其他事件处理器知道应用正在退出
+  appState.isQuitting = true;
+  app.isQuitting = true;
+  
+  // 如果是Windows平台且在打包环境下，主动使用映像名终止backend.exe
+  if (process.platform === 'win32' && app.isPackaged) {
+    try {
+      const { execSync } = require('child_process');
+      log('打包环境下主动尝试终止backend.exe进程');
+      execSync('taskkill /im backend.exe /f /t', { timeout: 3000 });
+      log('成功主动终止backend.exe进程');
+    } catch (err) {
+      // 如果进程不存在会抛出错误，这是可以接受的
+      log(`主动终止backend.exe返回: ${err.message}`);
+    }
+  }
 });
 
 // 处理macOS特性：点击dock图标时重新创建窗口
@@ -1994,3 +2084,4 @@ ipcMain.on('open-external-link', (event, url) => {
   if (url) shell.openExternal(url);
 });
 // ... existing code ...
+
