@@ -717,8 +717,14 @@ class FileManager:
             traceback.print_exc()
             return []
 
-    def get_file_icon_data(self, file_path):
-        """获取文件图标的Base64编码数据"""
+    def get_file_icon_data(self, file_path, remove_arrow=None):
+        """
+        获取文件图标的Base64编码数据
+        
+        Args:
+            file_path: 文件路径
+            remove_arrow: 是否移除箭头，如果为None则使用配置中的设置
+        """
         try:
             # 确保文件存在
             if not os.path.exists(file_path):
@@ -726,122 +732,134 @@ class FileManager:
                 print(f"文件不存在: {file_path}")
                 return None
             
-            # 检查缓存中是否有该图标
-            if file_path in self._icon_cache:
-                print(f"从缓存获取图标: {file_path}")
-                return self._icon_cache[file_path]
-            
-            # 根据文件类型处理不同的图标获取方式
+            # 检查是否是快捷方式文件
             file_ext = os.path.splitext(file_path)[1].lower()
+            is_shortcut = file_ext in ['.lnk', '.url']
             
-            # 处理URL文件
-            if file_ext == '.url':
-                try:
-                    print(f"处理URL文件图标(get_file_icon_data): {file_path}")
-                    # 解析URL文件中的IconFile行
-                    import configparser
-                    config = configparser.ConfigParser()
-                    config.read(file_path)
-                    
-                    if 'InternetShortcut' in config and 'IconFile' in config['InternetShortcut']:
-                        icon_file = config['InternetShortcut']['IconFile']
-                        if os.path.exists(icon_file):
-                            with open(icon_file, 'rb') as f:
-                                icon_data = f.read()
-                                icon_base64 = base64.b64encode(icon_data).decode('utf-8')
-                                # 缓存图标
-                                self._icon_cache[file_path] = icon_base64
-                                return icon_base64
-                    
-                    # 没有显式指定图标或找不到图标文件,使用系统方法
-                    icon_base64 = self.get_system_icon(file_ext[1:] if file_ext.startswith('.') else file_ext)
-                    if icon_base64:
-                        # 缓存图标
-                        self._icon_cache[file_path] = icon_base64
-                    return icon_base64
-                    
-                except Exception as e:
-                    logger.error(f"处理URL文件图标时出错: {str(e)}")
-                    print(f"处理URL文件图标时出错: {str(e)}")
-                    icon_base64 = self.get_system_icon(file_ext[1:] if file_ext.startswith('.') else file_ext)
-                    if icon_base64:
-                        # 缓存图标
-                        self._icon_cache[file_path] = icon_base64
-                    return icon_base64
-            
-            # 处理LNK文件 - 使用system_manager的专用方法
-            elif file_ext == '.lnk':
-                try:
-                    print(f"处理LNK文件图标(get_file_icon_data): {file_path}")
-                    if self.system_manager:
-                        icon_bytes = self.system_manager.get_lnk_icon(file_path)
-                        if icon_bytes:
-                            print(f"获取到LNK文件图标: {file_path}, 大小: {len(icon_bytes)} 字节")
-                            icon_base64 = base64.b64encode(icon_bytes).decode('utf-8')
-                            # 缓存图标
-                            self._icon_cache[file_path] = icon_base64
-                            return icon_base64
-                    
-                    print(f"专用方法无法获取LNK图标，尝试通用方法: {file_path}")
-                    # 如果system_manager的方法失败，尝试通用方法
-                except Exception as e:
-                    logger.error(f"处理LNK文件图标时出错: {str(e)}")
-                    print(f"处理LNK文件图标时出错: {str(e)}")
-            
-            # 处理可执行文件和其他文件类型
-            print(f"使用通用方法处理文件图标: {file_path}")
-            import win32api
-            import win32con
-            import win32ui
-            import win32gui
+            # 如果是快捷方式文件，并且传入了remove_arrow参数，则临时修改配置
+            original_setting = None
+            if is_shortcut and remove_arrow is not None and self.config_manager:
+                original_setting = self.config_manager.get("remove_arrow", False)
+                # 临时应用新设置
+                self.config_manager.set("remove_arrow", remove_arrow, save=False)
+                print(f"临时修改remove_arrow设置: {remove_arrow} (原始值: {original_setting})")
             
             try:
-                # 获取大图标句柄
-                large, small = win32gui.ExtractIconEx(file_path, 0)
-                if large:
-                    print(f"成功提取图标: {file_path}")
-                    # 将图标转换为位图
-                    hdc = win32ui.CreateDCFromHandle(win32gui.GetDC(0))
-                    hbmp = win32ui.CreateBitmap()
-                    hbmp.CreateCompatibleBitmap(hdc, 32, 32)
+                # 根据文件类型使用不同的图标获取方式
+                icon_base64 = None
+                
+                # 使用system_manager获取图标
+                if self.system_manager:
+                    print(f"使用system_manager获取图标: {file_path}")
+                    # 直接使用system_manager的方法获取图标
+                    icon_base64 = self.system_manager.get_file_icon_base64(file_path)
                     
-                    hdc2 = hdc.CreateCompatibleDC()
-                    hdc2.SelectObject(hbmp)
-                    hdc2.DrawIcon((0, 0), large[0])
-                    
-                    # 将位图转换为字节数据
-                    bmpstr = hbmp.GetBitmapBits(True)
-                    
-                    # 清理资源
-                    win32gui.DestroyIcon(large[0])
-                    if small:
-                        win32gui.DestroyIcon(small[0])
-                    hdc.DeleteDC()
-                    hdc2.DeleteDC()
-                    
-                    # 转换为Base64
-                    if bmpstr:
-                        print(f"成功转换图标为Base64: {file_path}")
-                        icon_base64 = base64.b64encode(bmpstr).decode('utf-8')
-                        # 缓存图标
-                        self._icon_cache[file_path] = icon_base64
+                    if icon_base64:
+                        print(f"system_manager成功获取图标: {file_path}")
                         return icon_base64
+                
+                # 如果system_manager方法失败，尝试旧方法获取
+                print(f"system_manager方法失败，尝试旧方法获取图标: {file_path}")
+                
+                # 处理URL文件
+                if file_ext == '.url':
+                    try:
+                        print(f"处理URL文件图标(get_file_icon_data): {file_path}")
+                        # 解析URL文件中的IconFile行
+                        import configparser
+                        config = configparser.ConfigParser()
+                        config.read(file_path)
+                        
+                        if 'InternetShortcut' in config and 'IconFile' in config['InternetShortcut']:
+                            icon_file = config['InternetShortcut']['IconFile']
+                            if os.path.exists(icon_file):
+                                with open(icon_file, 'rb') as f:
+                                    icon_data = f.read()
+                                    icon_base64 = base64.b64encode(icon_data).decode('utf-8')
+                                    return icon_base64
+                        
+                        # 没有显式指定图标或找不到图标文件,使用系统方法
+                        icon_base64 = self.get_system_icon(file_ext[1:] if file_ext.startswith('.') else file_ext)
+                        return icon_base64
+                        
+                    except Exception as e:
+                        logger.error(f"处理URL文件图标时出错: {str(e)}")
+                        print(f"处理URL文件图标时出错: {str(e)}")
+                        icon_base64 = self.get_system_icon(file_ext[1:] if file_ext.startswith('.') else file_ext)
+                        return icon_base64
+                
+                # 处理LNK文件 - 使用system_manager的专用方法
+                elif file_ext == '.lnk':
+                    try:
+                        print(f"处理LNK文件图标(get_file_icon_data): {file_path}")
+                        if self.system_manager:
+                            icon_bytes = self.system_manager.get_lnk_icon(file_path)
+                            if icon_bytes:
+                                print(f"获取到LNK文件图标: {file_path}, 大小: {len(icon_bytes)} 字节")
+                                icon_base64 = base64.b64encode(icon_bytes).decode('utf-8')
+                                return icon_base64
+                        
+                        print(f"专用方法无法获取LNK图标，尝试通用方法: {file_path}")
+                        # 如果system_manager的方法失败，尝试通用方法
+                    except Exception as e:
+                        logger.error(f"处理LNK文件图标时出错: {str(e)}")
+                        print(f"处理LNK文件图标时出错: {str(e)}")
+                
+                # 处理可执行文件和其他文件类型
+                print(f"使用通用方法处理文件图标: {file_path}")
+                import win32api
+                import win32con
+                import win32ui
+                import win32gui
+                
+                try:
+                    # 获取大图标句柄
+                    large, small = win32gui.ExtractIconEx(file_path, 0)
+                    if large:
+                        print(f"成功提取图标: {file_path}")
+                        # 将图标转换为位图
+                        hdc = win32ui.CreateDCFromHandle(win32gui.GetDC(0))
+                        hbmp = win32ui.CreateBitmap()
+                        hbmp.CreateCompatibleBitmap(hdc, 32, 32)
+                        
+                        hdc2 = hdc.CreateCompatibleDC()
+                        hdc2.SelectObject(hbmp)
+                        hdc2.DrawIcon((0, 0), large[0])
+                        
+                        # 将位图转换为字节数据
+                        bmpstr = hbmp.GetBitmapBits(True)
+                        
+                        # 清理资源
+                        win32gui.DestroyIcon(large[0])
+                        if small:
+                            win32gui.DestroyIcon(small[0])
+                        hdc.DeleteDC()
+                        hdc2.DeleteDC()
+                        
+                        # 转换为Base64
+                        if bmpstr:
+                            print(f"成功转换图标为Base64: {file_path}")
+                            icon_base64 = base64.b64encode(bmpstr).decode('utf-8')
+                            return icon_base64
+                        else:
+                            print(f"位图数据为空: {file_path}")
                     else:
-                        print(f"位图数据为空: {file_path}")
-                else:
-                    print(f"无法提取图标: {file_path}")
-            except Exception as e:
-                logger.error(f"获取图标错误: {str(e)}")
-                print(f"获取图标错误: {str(e)}")
-            
-            # 使用默认方式获取图标
-            print(f"尝试使用系统图标: {file_path}")
-            icon_base64 = self.get_system_icon(file_ext[1:] if file_ext.startswith('.') else file_ext)
-            if icon_base64:
-                # 缓存图标
-                self._icon_cache[file_path] = icon_base64
-            return icon_base64
-            
+                        print(f"无法提取图标: {file_path}")
+                except Exception as e:
+                    logger.error(f"获取图标错误: {str(e)}")
+                    print(f"获取图标错误: {str(e)}")
+                
+                # 使用默认方式获取图标
+                print(f"尝试使用系统图标: {file_path}")
+                icon_base64 = self.get_system_icon(file_ext[1:] if file_ext.startswith('.') else file_ext)
+                return icon_base64
+                
+            finally:
+                # 恢复原始设置
+                if original_setting is not None and self.config_manager:
+                    self.config_manager.set("remove_arrow", original_setting, save=False)
+                    print(f"恢复remove_arrow设置: {original_setting}")
+                
         except Exception as e:
             logger.error(f"获取文件图标数据失败: {str(e)}")
             print(f"获取文件图标数据失败: {str(e)}")

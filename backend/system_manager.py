@@ -17,6 +17,7 @@ from win32com.shell import shell
 from typing import Optional, Tuple
 import struct
 import uuid
+import hashlib
 
 # 第三方库导入
 import pythoncom
@@ -41,8 +42,75 @@ class SystemManager:
         # 初始化图标缓存
         self._icon_cache = {}
         self._lnk_icon_cache = {}
+        
+        # 创建图标缓存目录（修改为%APPDATA%\quickstart\icon_cache）
+        appdata_path = os.environ.get('APPDATA')
+        if appdata_path:
+            self.cache_dir = os.path.join(appdata_path, 'quickstart', 'icon_cache')
+        else:
+            # 如果无法获取APPDATA环境变量，退回到用户主目录
+            self.cache_dir = os.path.join(os.path.expanduser('~'), '.quickstart', 'icon_cache')
+        
+        os.makedirs(self.cache_dir, exist_ok=True)
+        print(f"图标缓存目录: {self.cache_dir}")
+        
         # 不再需要QFileIconProvider
         pass
+    
+    def _get_cached_icon(self, file_path: str, with_arrow: bool = False) -> Optional[bytes]:
+        """
+        从缓存获取图标
+        
+        Args:
+            file_path: 文件路径
+            with_arrow: 是否获取带箭头的图标版本
+            
+        Returns:
+            缓存的图标数据，如果不存在则返回None
+        """
+        # 生成文件路径的哈希值作为缓存的键
+        file_hash = hashlib.md5(file_path.encode('utf-8')).hexdigest()
+        
+        # 根据是否需要箭头选择不同的缓存文件名
+        suffix = "_arrow" if with_arrow else "_plain"
+        cache_file = os.path.join(self.cache_dir, f"{file_hash}{suffix}.png")
+        
+        # 检查缓存文件是否存在
+        if os.path.exists(cache_file):
+            try:
+                with open(cache_file, 'rb') as f:
+                    print(f"从缓存加载图标: {cache_file}")
+                    return f.read()
+            except Exception as e:
+                print(f"读取缓存图标失败: {e}")
+        
+        return None
+    
+    def _save_icon_to_cache(self, file_path: str, icon_data: bytes, with_arrow: bool = False) -> None:
+        """
+        保存图标到缓存
+        
+        Args:
+            file_path: 文件路径
+            icon_data: 图标数据
+            with_arrow: 是否为带箭头的图标版本
+        """
+        if not icon_data:
+            return
+        
+        # 生成文件路径的哈希值作为缓存的键
+        file_hash = hashlib.md5(file_path.encode('utf-8')).hexdigest()
+        
+        # 根据是否需要箭头选择不同的缓存文件名
+        suffix = "_arrow" if with_arrow else "_plain"
+        cache_file = os.path.join(self.cache_dir, f"{file_hash}{suffix}.png")
+        
+        try:
+            with open(cache_file, 'wb') as f:
+                f.write(icon_data)
+                print(f"图标已缓存: {cache_file}")
+        except Exception as e:
+            print(f"缓存图标失败: {e}")
     
     def get_file_icon_base64(self, file_path: str) -> Optional[str]:
         """
@@ -58,10 +126,47 @@ class SystemManager:
             if not os.path.exists(file_path):
                 return None
             
+            # 检查文件类型
+            is_shortcut = file_path.lower().endswith(('.lnk', '.url'))
+            
+            # 如果是快捷方式，使用专门的方法处理
+            if is_shortcut:
+                # 获取设置中是否移除箭头
+                remove_arrow = False
+                if self.config_manager:
+                    remove_arrow = self.config_manager.get("remove_arrow", False)
+                
+                # 根据设置选择使用带箭头还是不带箭头的图标
+                with_arrow = not remove_arrow
+                
+                # 尝试从缓存获取图标
+                cached_icon = self._get_cached_icon(file_path, with_arrow)
+                if cached_icon:
+                    return base64.b64encode(cached_icon).decode('utf-8')
+                
+                # 如果是.lnk文件
+                if file_path.lower().endswith('.lnk'):
+                    icon_data = self.get_lnk_icon(file_path)
+                    if icon_data:
+                        return base64.b64encode(icon_data).decode('utf-8')
+                
+                # 如果是.url文件
+                elif file_path.lower().endswith('.url'):
+                    icon_data = self.get_url_icon(file_path)
+                    if icon_data:
+                        return base64.b64encode(icon_data).decode('utf-8')
+            
+            # 对于普通文件，尝试从缓存获取
+            cached_icon = self._get_cached_icon(file_path, False)
+            if cached_icon:
+                return base64.b64encode(cached_icon).decode('utf-8')
+            
             # 使用Win32 API获取系统图标
             try:
                 icon_data = self.get_icon_win32(file_path)
                 if icon_data:
+                    # 缓存普通文件图标
+                    self._save_icon_to_cache(file_path, icon_data, False)
                     return base64.b64encode(icon_data).decode('utf-8')
             except Exception as e:
                 print(f"使用Win32获取图标失败: {e}")
@@ -164,15 +269,15 @@ class SystemManager:
             print(f"获取文件信息失败: {e}")
             return None
     
-    def _icon_to_bitmap(self, hicon: int) -> bytes:
+    def _icon_to_bitmap(self, hicon: int, add_arrow: bool = False) -> bytes:
         """将图标句柄转换为位图数据 - 简化版"""
         try:
             print(f"开始转换图标句柄: {hicon}")
             # 检查是否需要显示箭头
             show_arrow = False
-            if self.config_manager:
+            if add_arrow and self.config_manager:
                 remove_arrow = self.config_manager.get("remove_arrow", False)
-                show_arrow = not remove_arrow
+                show_arrow = not remove_arrow and add_arrow
                 print(f"移除箭头设置: {remove_arrow}, 显示箭头: {show_arrow}")
             
             # 获取图标尺寸
@@ -228,33 +333,9 @@ class SystemManager:
                     
                     # 如果需要显示箭头，添加自定义箭头
                     if show_arrow:
-                        print("添加自定义箭头")
-                        # 添加箭头图标
-                        arrow_icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
-                                                   "frontend", "assets", "img", "arrow_icon.png")
-                        if os.path.exists(arrow_icon_path):
-                            print(f"箭头图标路径存在: {arrow_icon_path}")
-                            arrow_img = Image.open(arrow_icon_path).convert('RGBA')
-                            # 箭头尺寸为图标的40%
-                            arrow_size = int(target_size[0] * 0.4)
-                            try:
-                                arrow_img = arrow_img.resize((arrow_size, arrow_size), Image.LANCZOS)
-                            except AttributeError:
-                                arrow_img = arrow_img.resize((arrow_size, arrow_size), Image.ANTIALIAS)
-                            
-                            # 箭头位置（左下角）
-                            paste_x = int(target_size[0] * 0.1)
-                            paste_y = target_size[1] - int(target_size[1] * 0.1) - arrow_size
-                            
-                            # 创建透明层用于箭头
-                            arrow_layer = Image.new('RGBA', target_size, (0, 0, 0, 0))
-                            arrow_layer.paste(arrow_img, (paste_x, paste_y), arrow_img)
-                            
-                            # 添加箭头
-                            img = Image.alpha_composite(img, arrow_layer)
-                            print("成功添加自定义箭头")
-                        else:
-                            print(f"箭头图标不存在: {arrow_icon_path}")
+                        img = self._add_arrow_to_icon(img)
+                        if img:
+                            return img
                     
                     # 保存为PNG
                     output = io.BytesIO()
@@ -323,12 +404,24 @@ class SystemManager:
     def get_url_icon(self, file_path: str) -> Optional[bytes]:
         """获取.url文件的图标"""
         try:
-
-            
             # 检查是否需要显示箭头
+            remove_arrow = False
             if self.config_manager:
                 remove_arrow = self.config_manager.get("remove_arrow", False)
-
+                
+            # 尝试从缓存获取图标(不带箭头的版本)
+            cached_plain_icon = self._get_cached_icon(file_path, False)
+            if cached_plain_icon:
+                # 如果需要不带箭头的图标且缓存中有，直接返回
+                if remove_arrow:
+                    return cached_plain_icon
+                else:
+                    # 查看是否有带箭头的缓存版本
+                    cached_arrow_icon = self._get_cached_icon(file_path, True)
+                    if cached_arrow_icon:
+                        return cached_arrow_icon
+            
+            # 缓存中没有找到，需要重新获取图标
             
             # 先尝试使用 URL 文件中指定的图标
             icon_file = None
@@ -339,26 +432,23 @@ class SystemManager:
                     for line in f:
                         if line.startswith("IconFile="):
                             icon_file = line.split("=", 1)[1].strip()
-
                         elif line.startswith("IconIndex="):
                             try:
                                 icon_index = int(line.split("=", 1)[1].strip())
-
                             except ValueError:
                                 pass
                         elif line.startswith("URL="):
                             url = line.split("=", 1)[1].strip()
-
             except Exception as e:
                 print(f"解析URL文件失败: {e}")
 
+            # 获取原始图标
+            original_icon_data = None
+            
             # 如果有有效的 IconFile 路径，尝试加载图标
             if icon_file and os.path.exists(icon_file):
-
-                
                 # 检查是否是.ico文件
                 if icon_file.lower().endswith('.ico') and PIL_AVAILABLE:
-
                     try:
                         # 使用PIL直接读取.ico文件
                         with Image.open(icon_file) as ico:
@@ -385,90 +475,31 @@ class SystemManager:
                             img = Image.new('RGBA', target_size, (0, 0, 0, 0))
                             img.paste(ico, (0, 0), ico)
                             
-                            # 如果需要显示箭头，添加自定义箭头
-                            if not remove_arrow:
-                                # 添加箭头图标
-                                arrow_icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
-                                                           "frontend", "assets", "img", "arrow_icon.png")
-                                if os.path.exists(arrow_icon_path):
-                                    arrow_img = Image.open(arrow_icon_path).convert('RGBA')
-                                    # 箭头尺寸为图标的40%
-                                    arrow_size = int(target_size[0] * 0.4)
-                                    try:
-                                        arrow_img = arrow_img.resize((arrow_size, arrow_size), Image.LANCZOS)
-                                    except AttributeError:
-                                        arrow_img = arrow_img.resize((arrow_size, arrow_size), Image.ANTIALIAS)
-                                    
-                                    # 箭头位置（左下角）
-                                    paste_x = int(target_size[0] * 0.1)
-                                    paste_y = target_size[1] - int(target_size[1] * 0.1) - arrow_size
-                                    
-                                    # 创建透明层用于箭头
-                                    arrow_layer = Image.new('RGBA', target_size, (0, 0, 0, 0))
-                                    arrow_layer.paste(arrow_img, (paste_x, paste_y), arrow_img)
-                                    
-                                    # 添加箭头
-                                    img = Image.alpha_composite(img, arrow_layer)
-            
-                            
-                            # 转换为PNG格式的二进制数据
+                            # 保存原始版本(不带箭头)
                             output = io.BytesIO()
                             img.save(output, format='PNG')
-                            icon_data = output.getvalue()
+                            original_icon_data = output.getvalue()
                             
-                            if icon_data:
-
-                                return icon_data
+                            # 缓存原始版本
+                            self._save_icon_to_cache(file_path, original_icon_data, False)
+                            
+                            # 创建带箭头版本
+                            arrow_icon_data = self._add_arrow_to_icon(img)
+                            if arrow_icon_data:
+                                # 缓存带箭头版本
+                                self._save_icon_to_cache(file_path, arrow_icon_data, True)
+                            
+                            # 根据设置返回相应版本
+                            if remove_arrow:
+                                return original_icon_data
+                            else:
+                                return arrow_icon_data or original_icon_data
                     except Exception as ico_err:
                         print(f"直接读取.ico文件失败: {ico_err}")
-                
-                # 使用 ExtractIconEx 提取图标
-                try:
-                    large_icons = (ctypes.c_int * 1)()
-                    small_icons = (ctypes.c_int * 1)()
-                    
-                    # 使用ExtractIconEx提取图标
-                    num_icons = ctypes.windll.shell32.ExtractIconExW(
-                        icon_file, icon_index, large_icons, small_icons, 1
-                    )
-
-                    
-                    if num_icons > 0 and large_icons[0]:
-                        # 转换图标为位图
-                        icon_data = self._icon_to_bitmap(large_icons[0])
-                        
-                        # 释放图标
-                        ctypes.windll.user32.DestroyIcon(large_icons[0])
-                        if small_icons[0]:
-                            ctypes.windll.user32.DestroyIcon(small_icons[0])
-                        
-                        if icon_data:
-
-                            return icon_data
-                        else:
-                            print("转换图标为位图失败")
-                except Exception as e:
-                    print(f"从IconFile提取图标失败: {e}")
             
-            # 尝试获取URL目标网站的图标
-            if url and url.startswith(("http://", "https://")):
-                try:
-
-                    # 获取域名
-                    from urllib.parse import urlparse
-                    parsed_url = urlparse(url)
-                    domain = parsed_url.netloc
-                    
-                    # 尝试找到与该域名相关的本地应用
-                    # 例如，获取默认浏览器图标
-                    # 这里可以根据需要扩展，目前简单使用Shell API
-                    pass
-                except Exception as e:
-                    print(f"获取URL目标网站图标失败: {e}")
-            
-            # 使用Shell API获取图标
+            # 如果上述方法都失败，使用Shell API或直接方法获取图标
             try:
-
+                # 尝试使用Shell API获取URL图标
                 shell32 = ctypes.windll.shell32
                 SHGFI_ICON = 0x000000100
                 SHGFI_LARGEICON = 0x000000000
@@ -489,32 +520,64 @@ class SystemManager:
                 )
                 
                 if result and info.hIcon:
-
                     # 将图标转换为位图
-                    icon_data = self._icon_to_bitmap(info.hIcon)
+                    original_icon_data = self._icon_to_bitmap(info.hIcon, False)  # 不带箭头
                     
                     # 释放图标
                     ctypes.windll.user32.DestroyIcon(info.hIcon)
                     
-                    if icon_data:
-
-                        return icon_data
-                    else:
-                        print("转换URL图标为位图失败")
-                else:
-                    print("未能获取URL图标句柄")
+                    if original_icon_data:
+                        # 缓存原始版本
+                        self._save_icon_to_cache(file_path, original_icon_data, False)
+                        
+                        # 如果有PIL可用，创建带箭头版本
+                        if PIL_AVAILABLE:
+                            try:
+                                img = Image.open(io.BytesIO(original_icon_data))
+                                arrow_icon_data = self._add_arrow_to_icon(img)
+                                if arrow_icon_data:
+                                    # 缓存带箭头版本
+                                    self._save_icon_to_cache(file_path, arrow_icon_data, True)
+                                    
+                                    # 根据设置返回相应版本
+                                    if remove_arrow:
+                                        return original_icon_data
+                                    else:
+                                        return arrow_icon_data
+                            except Exception as e:
+                                print(f"创建带箭头版本图标失败: {e}")
+                        
+                        # 如果无法创建带箭头版本或不需要箭头，返回原始版本
+                        return original_icon_data
             except Exception as e:
                 print(f"使用Shell API获取URL图标失败: {e}")
             
-            # 如果上述方法都失败，使用直接获取图标的方法
+            # 最后尝试直接获取图标
             try:
-
-                icon_data = self.get_icon_win32(file_path)
-                if icon_data:
-
-                    return icon_data
-                else:
-                    print("直接获取图标失败")
+                original_icon_data = self.get_icon_win32(file_path)
+                if original_icon_data:
+                    # 缓存原始版本
+                    self._save_icon_to_cache(file_path, original_icon_data, False)
+                    
+                    # 如果有PIL可用，创建带箭头版本
+                    if PIL_AVAILABLE:
+                        try:
+                            img = Image.open(io.BytesIO(original_icon_data))
+                            arrow_icon_data = self._add_arrow_to_icon(img)
+                            if arrow_icon_data:
+                                # 缓存带箭头版本
+                                self._save_icon_to_cache(file_path, arrow_icon_data, True)
+                                
+                                # 根据设置返回相应版本
+                                if remove_arrow:
+                                    return original_icon_data
+                                else:
+                                    return arrow_icon_data
+                        except Exception as e:
+                            print(f"创建带箭头版本图标失败: {e}")
+                    
+                    # 如果无法创建带箭头版本或不需要箭头，返回原始版本
+                    return original_icon_data
             except Exception as e:
                 print(f"直接获取图标失败: {e}")
             
@@ -533,7 +596,15 @@ class SystemManager:
                 remove_arrow = self.config_manager.get("remove_arrow", False)
                 print(f"移除箭头设置: {remove_arrow}")
             
+            # 尝试从缓存获取图标
+            with_arrow = not remove_arrow
+            cached_icon = self._get_cached_icon(file_path, with_arrow)
+            if cached_icon:
+                print(f"使用缓存的图标(带箭头={with_arrow})")
+                return cached_icon
+            
             # 方法1: 尝试获取目标文件图标（无箭头）
+            original_icon_data = None
             try:
                 print("方法1: 尝试获取目标文件图标")
                 # 初始化COM环境以获取目标路径
@@ -554,48 +625,30 @@ class SystemManager:
                     if target_path and os.path.exists(target_path):
                         print(f"目标路径存在，尝试获取目标图标")
                         # 直接获取目标文件的图标
-                        icon_data = self.get_icon_win32(target_path)
-                        if icon_data:
-                            print(f"方法1成功: 获取到目标文件图标，大小: {len(icon_data)} 字节")
+                        original_icon_data = self.get_icon_win32(target_path)
+                        if original_icon_data:
+                            print(f"方法1成功: 获取到目标文件图标，大小: {len(original_icon_data)} 字节")
+                            # 缓存不带箭头的原始版本
+                            self._save_icon_to_cache(file_path, original_icon_data, False)
+                            
+                            # 如果需要带箭头的版本
+                            if not remove_arrow and PIL_AVAILABLE:
+                                try:
+                                    img = Image.open(io.BytesIO(original_icon_data))
+                                    arrow_icon_data = self._add_arrow_to_icon(img)
+                                    if arrow_icon_data:
+                                        # 缓存带箭头版本
+                                        self._save_icon_to_cache(file_path, arrow_icon_data, True)
+                                        pythoncom.CoUninitialize()
+                                        return arrow_icon_data
+                                except Exception as e:
+                                    print(f"创建带箭头版本图标失败: {e}")
+                            
+                            # 如果不需要箭头或创建失败，返回原始版本
                             pythoncom.CoUninitialize()
-                            return icon_data
+                            return original_icon_data
                         else:
                             print("方法1失败: 无法获取目标文件图标")
-                        
-                    # 如果没有有效的目标路径或无法获取图标，尝试直接从快捷方式获取图标
-                    print("尝试从LNK文件本身的图标位置获取")
-                    icon_location = shell_link.GetIconLocation()
-                    print(f"图标位置: {icon_location}")
-                    
-                    if icon_location and icon_location[0] and os.path.exists(icon_location[0]):
-                        print(f"图标位置存在，尝试获取图标: {icon_location[0]}, 索引: {icon_location[1]}")
-                        # 从指定的图标位置获取图标
-                        large_icons = (ctypes.c_int * 1)()
-                        small_icons = (ctypes.c_int * 1)()
-                        
-                        num_icons = ctypes.windll.shell32.ExtractIconExW(
-                            icon_location[0], icon_location[1], large_icons, small_icons, 1
-                        )
-                        print(f"提取的图标数: {num_icons}")
-                        
-                        if num_icons > 0 and large_icons[0]:
-                            print("成功提取图标，转换为位图")
-                            # 转换图标为位图
-                            icon_data = self._icon_to_bitmap(large_icons[0])
-                            
-                            # 释放图标
-                            ctypes.windll.user32.DestroyIcon(large_icons[0])
-                            if small_icons[0]:
-                                ctypes.windll.user32.DestroyIcon(small_icons[0])
-                            
-                            if icon_data:
-                                print(f"方法1成功: 从图标位置获取图标，大小: {len(icon_data)} 字节")
-                                pythoncom.CoUninitialize()
-                                return icon_data
-                            else:
-                                print("方法1失败: 图标转换为位图失败")
-                        else:
-                            print("方法1失败: 未提取到图标")
                 finally:
                     pythoncom.CoUninitialize()
             except Exception as e:
@@ -619,30 +672,65 @@ class SystemManager:
                         ("szTypeName", ctypes.c_wchar * 80)
                     ]
                 
+                # 先获取不带箭头的图标
                 info = SHFILEINFOW()
-                # 使用SHGFI_LINKOVERLAY标志直接获取带箭头的快捷方式图标
-                flags = SHGFI_ICON | SHGFI_LARGEICON
-                if not remove_arrow:
-                    flags |= SHGFI_LINKOVERLAY
-                    print("添加SHGFI_LINKOVERLAY标志")
-                
-                print(f"调用SHGetFileInfoW, 文件路径: {file_path}")
+                print(f"调用SHGetFileInfoW获取不带箭头图标, 文件路径: {file_path}")
                 result = shell32.SHGetFileInfoW(
-                    file_path, 0, ctypes.byref(info), ctypes.sizeof(info), flags
+                    file_path, 0, ctypes.byref(info), ctypes.sizeof(info), 
+                    SHGFI_ICON | SHGFI_LARGEICON
                 )
                 print(f"SHGetFileInfoW结果: {result}, 图标句柄: {info.hIcon}")
                 
                 if result and info.hIcon:
                     print("获取到图标句柄，转换为位图")
                     # 将图标转换为位图
-                    icon_data = self._icon_to_bitmap(info.hIcon)
+                    original_icon_data = self._icon_to_bitmap(info.hIcon, False)  # 确保不带箭头
                     
                     # 释放图标
                     ctypes.windll.user32.DestroyIcon(info.hIcon)
                     
-                    if icon_data:
-                        print(f"方法2成功: 图标大小: {len(icon_data)} 字节")
-                        return icon_data
+                    if original_icon_data:
+                        print(f"成功获取不带箭头的图标, 大小: {len(original_icon_data)} 字节")
+                        # 缓存不带箭头的原始版本
+                        self._save_icon_to_cache(file_path, original_icon_data, False)
+                        
+                        # 然后获取带箭头的图标
+                        if not remove_arrow:
+                            # 方法1: 使用SHGFI_LINKOVERLAY标志
+                            info = SHFILEINFOW()
+                            print("添加SHGFI_LINKOVERLAY标志获取带箭头图标")
+                            result = shell32.SHGetFileInfoW(
+                                file_path, 0, ctypes.byref(info), ctypes.sizeof(info), 
+                                SHGFI_ICON | SHGFI_LARGEICON | SHGFI_LINKOVERLAY
+                            )
+                            
+                            if result and info.hIcon:
+                                # 将图标转换为位图
+                                arrow_icon_data = self._icon_to_bitmap(info.hIcon, False)  # 不再手动添加箭头
+                                
+                                # 释放图标
+                                ctypes.windll.user32.DestroyIcon(info.hIcon)
+                                
+                                if arrow_icon_data:
+                                    print(f"成功获取带箭头的图标, 大小: {len(arrow_icon_data)} 字节")
+                                    # 缓存带箭头版本
+                                    self._save_icon_to_cache(file_path, arrow_icon_data, True)
+                                    return arrow_icon_data
+                            
+                            # 方法2: 如果SHGFI_LINKOVERLAY失败，尝试手动添加箭头
+                            if PIL_AVAILABLE:
+                                try:
+                                    img = Image.open(io.BytesIO(original_icon_data))
+                                    arrow_icon_data = self._add_arrow_to_icon(img)
+                                    if arrow_icon_data:
+                                        # 缓存带箭头版本
+                                        self._save_icon_to_cache(file_path, arrow_icon_data, True)
+                                        return arrow_icon_data
+                                except Exception as e:
+                                    print(f"创建带箭头版本图标失败: {e}")
+                        
+                        # 如果不需要箭头或无法创建带箭头版本，返回原始版本
+                        return original_icon_data
                     else:
                         print("方法2失败: 转换图标为位图失败")
                 else:
@@ -650,45 +738,126 @@ class SystemManager:
             except Exception as e:
                 print(f"方法2失败，错误: {e}")
             
-            # 方法3: 尝试直接使用ExtractIconEx
-            try:
-                print("方法3: 尝试直接使用ExtractIconEx")
-                # 提取图标
-                large_icons = (ctypes.c_int * 1)()
-                small_icons = (ctypes.c_int * 1)()
-                
-                print(f"调用ExtractIconExW, 文件路径: {file_path}")
-                # 直接从快捷方式文件提取图标
-                num_icons = ctypes.windll.shell32.ExtractIconExW(
-                    file_path, 0, large_icons, small_icons, 1
-                )
-                print(f"ExtractIconExW结果, 提取的图标数: {num_icons}")
-                
-                if num_icons > 0 and large_icons[0]:
-                    print("成功提取图标，转换为位图")
-                    # 转换图标为位图
-                    icon_data = self._icon_to_bitmap(large_icons[0])
-                    
-                    # 释放图标
-                    ctypes.windll.user32.DestroyIcon(large_icons[0])
-                    if small_icons[0]:
-                        ctypes.windll.user32.DestroyIcon(small_icons[0])
-                    
-                    if icon_data:
-                        print(f"方法3成功: 图标大小: {len(icon_data)} 字节")
-                        return icon_data
-                    else:
-                        print("方法3失败: 转换图标为位图失败")
-                else:
-                    print("方法3失败: 未提取到任何图标")
-            except Exception as e:
-                print(f"方法3失败，错误: {e}")
-            
             # 默认返回空
             print("所有方法都失败，无法获取LNK图标")
             return None
         except Exception as e:
             print(f"读取LNK文件图标失败: {e}")
+            return None
+    
+    def _add_arrow_to_icon(self, img) -> Optional[bytes]:
+        """
+        向图标添加箭头
+        
+        Args:
+            img: PIL Image对象，原始图标
+            
+        Returns:
+            添加了箭头的图标二进制数据，失败则返回None
+        """
+        if not PIL_AVAILABLE:
+            return None
+        
+        try:
+            # 确保图像是RGBA模式
+            if img.mode != 'RGBA':
+                img = img.convert('RGBA')
+            
+            # 获取原始图像大小
+            target_size = img.size
+            
+            # 添加箭头图标
+            arrow_icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
+                                           "frontend", "assets", "img", "arrow_icon.png")
+            
+            if not os.path.exists(arrow_icon_path):
+                print(f"箭头图标不存在: {arrow_icon_path}")
+                # 尝试创建临时箭头
+                arrow_icon_path = self._find_arrow_icon()
+                if not arrow_icon_path:
+                    return None
+            
+            print(f"使用箭头图标: {arrow_icon_path}")
+            arrow_img = Image.open(arrow_icon_path).convert('RGBA')
+            
+            # 箭头尺寸为图标的40%
+            arrow_size = int(target_size[0] * 0.4)
+            try:
+                arrow_img = arrow_img.resize((arrow_size, arrow_size), Image.LANCZOS)
+            except AttributeError:
+                arrow_img = arrow_img.resize((arrow_size, arrow_size), Image.ANTIALIAS)
+            
+            # 箭头位置（左下角）
+            paste_x = int(target_size[0] * 0.1)
+            paste_y = target_size[1] - int(target_size[1] * 0.1) - arrow_size
+            
+            # 创建透明层用于箭头
+            arrow_layer = Image.new('RGBA', target_size, (0, 0, 0, 0))
+            arrow_layer.paste(arrow_img, (paste_x, paste_y), arrow_img)
+            
+            # 添加箭头
+            result_img = Image.alpha_composite(img, arrow_layer)
+            
+            # 转换为PNG格式的二进制数据
+            output = io.BytesIO()
+            result_img.save(output, format='PNG')
+            
+            print("成功添加箭头到图标")
+            return output.getvalue()
+        except Exception as e:
+            print(f"添加箭头到图标失败: {e}")
+            return None
+    
+    def _find_arrow_icon(self) -> Optional[str]:
+        """查找箭头图标文件，返回找到的第一个有效路径"""
+        try:
+            # 查找的潜在路径列表
+            possible_paths = [
+                # 开发环境
+                os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
+                            "frontend", "assets", "img", "arrow_icon.png"),
+                # 打包环境
+                os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
+                            "assets", "img", "arrow_icon.png"),
+                # 备用路径
+                os.path.join(os.path.dirname(os.path.abspath(__file__)), 
+                            "assets", "img", "arrow_icon.png")
+            ]
+            
+            # 检查每个可能的路径
+            for p in possible_paths:
+                if os.path.exists(p):
+                    print(f"找到箭头图标: {p}")
+                    return p
+            
+            # 特殊处理：复制箭头图标到临时目录并返回路径
+            try:
+                print("未找到箭头图标，尝试临时创建一个")
+                temp_dir = tempfile.gettempdir()
+                temp_arrow_path = os.path.join(temp_dir, "arrow_icon.png")
+                
+                # 如果已经存在，直接返回
+                if os.path.exists(temp_arrow_path):
+                    print(f"找到临时箭头图标: {temp_arrow_path}")
+                    return temp_arrow_path
+                    
+                # 创建一个简单的箭头图标
+                from PIL import Image, ImageDraw
+                img = Image.new('RGBA', (32, 32), (0, 0, 0, 0))
+                draw = ImageDraw.Draw(img)
+                
+                # 绘制一个简单的箭头
+                draw.polygon([(8, 8), (24, 8), (16, 24)], fill=(0, 0, 160, 230))
+                
+                # 保存
+                img.save(temp_arrow_path, format='PNG')
+                print(f"已创建临时箭头图标: {temp_arrow_path}")
+                return temp_arrow_path
+            except Exception as e:
+                print(f"创建临时箭头图标失败: {e}")
+                return None
+        except Exception as e:
+            print(f"查找箭头图标失败: {e}")
             return None
     
     def open_file_location(self, file_path: str) -> bool:

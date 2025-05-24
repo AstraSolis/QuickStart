@@ -91,6 +91,7 @@
 应用的设置和文件信息保存在用户目录下的数据库中：
 
 - 数据库文件：`%APPDATA%\quickstart\quickstart.db`
+- 图标缓存：`%APPDATA%\quickstart\icon_cache\`
 - 版本信息：`version.json` 和 `version.txt`
 
 ---

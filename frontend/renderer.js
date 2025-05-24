@@ -355,7 +355,7 @@ function getConfigPath() {
     })
     .catch(error => {
       console.error('Failed to get config path:', error);
-      showMessage('open_config_location_failed', 'error');
+      showMessage('无法获取配置文件路径', 'error');
     });
 }
 
@@ -375,7 +375,55 @@ function openConfigLocation() {
     })
     .catch(error => {
       console.error('Failed to open config location:', error);
-      showMessage('open_config_location_failed', 'error');
+      showMessage('打开配置文件位置失败', 'error');
+    });
+}
+
+// 获取图标缓存路径
+function getIconCachePath() {
+  axios.get(`${API_BASE_URL}/icon-cache-path`)
+    .then(response => {
+      if (response.data.success && response.data.data) {
+        const iconCachePathElem = DOM.iconCachePath;
+        if (iconCachePathElem) {
+          iconCachePathElem.textContent = response.data.data;
+          
+          // 添加点击事件，使其可以在文件管理器中打开
+          iconCachePathElem.style.cursor = 'pointer';
+          iconCachePathElem.title = translations['click_to_open'] || '点击打开图标缓存所在目录';
+          iconCachePathElem.classList.add('clickable-path');
+          
+          // 移除旧的事件监听器（如果存在）
+          iconCachePathElem.removeEventListener('click', openIconCacheLocation);
+          
+          // 添加新的事件监听器
+          iconCachePathElem.addEventListener('click', openIconCacheLocation);
+        }
+      }
+    })
+    .catch(error => {
+      console.error('Failed to get icon cache path:', error);
+      showMessage('无法获取图标缓存路径', 'error');
+    });
+}
+
+// 打开图标缓存所在位置
+function openIconCacheLocation() {
+  const iconCachePath = DOM.iconCachePath.textContent;
+  if (!iconCachePath) return;
+  
+  // 发送请求到后端打开文件位置
+  axios.post(`${API_BASE_URL}/system/file-location`, {
+    path: iconCachePath
+  })
+    .then(response => {
+      if (!response.data.success) {
+        showMessage(response.data.message || '无法打开图标缓存位置', 'error');
+      }
+    })
+    .catch(error => {
+      console.error('Failed to open icon cache location:', error);
+      showMessage('打开图标缓存位置失败', 'error');
     });
 }
 
@@ -494,12 +542,6 @@ ${t('support_drag_drop')}`;
   if (minimizeToTrayLabel) minimizeToTrayLabel.textContent = t('minimize_to_tray');
   const configPathLabel = document.getElementById('config-path-label');
   if (configPathLabel) configPathLabel.textContent = t('config_path') || '配置文件位置';
-  
-  // 图标缓存
-  const iconCacheLabel = document.getElementById('icon-cache-label');
-  if (iconCacheLabel) iconCacheLabel.textContent = t('icon_cache') || '图标缓存';
-  const clearIconCacheBtn = document.getElementById('clear-icon-cache-btn');
-  if (clearIconCacheBtn) clearIconCacheBtn.textContent = t('clear_cache') || '清理缓存';
   
   // 重置按钮
   const resetBtn = document.querySelector('#reset-all-btn');
@@ -899,6 +941,9 @@ async function getFileIcon(filePath) {
     
     console.log(`尝试获取图标: ${filePath}`);
     
+    // 判断是否是快捷方式文件
+    const isShortcut = filePath.toLowerCase().endsWith('.lnk') || filePath.toLowerCase().endsWith('.url');
+    
     // 通过IPC请求主进程获取图标
     const iconBase64 = await window.electronAPI.ipcInvoke('get-file-icon', filePath);
     if (iconBase64) {
@@ -908,32 +953,18 @@ async function getFileIcon(filePath) {
     
     // 如果主进程无法获取图标，尝试通过API获取
     try {
-      const isLnkFile = filePath.toLowerCase().endsWith('.lnk');
-      console.log(`尝试通过API获取图标, 是否LNK文件: ${isLnkFile}`);
+      // 构建请求参数
+      const params = { path: filePath };
       
-      // 对于.lnk文件，可以尝试使用测试路由来调试
-      if (isLnkFile) {
-        console.log(`尝试使用测试路由获取LNK图标: ${filePath}`);
-        try {
-          const testResponse = await axios.get(`${API_BASE_URL}/test/lnk-icon`, {
-            params: { path: filePath },
-            responseType: 'json'
-          });
-          
-          if (testResponse.data && testResponse.data.success && testResponse.data.data) {
-            console.log(`测试路由成功获取LNK图标: ${filePath}`);
-            return `data:image/png;base64,${testResponse.data.data}`;
-          } else {
-            console.log(`测试路由无法获取LNK图标: ${filePath}, 原因: ${testResponse.data.message}`);
-          }
-        } catch (testErr) {
-          console.error(`测试路由获取LNK图标失败: ${testErr}`);
-        }
+      // 如果是快捷方式，添加remove_arrow参数
+      if (isShortcut) {
+        params.remove_arrow = settings.remove_arrow === true;
+        console.log(`请求快捷方式图标: ${filePath}, 移除箭头: ${params.remove_arrow}`);
       }
       
       // 使用标准图标API
       const response = await axios.get(`${API_BASE_URL}/file/icon`, {
-        params: { path: filePath },
+        params: params,
         responseType: 'json'
       });
       

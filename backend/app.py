@@ -581,8 +581,16 @@ def get_file_icon():
         if not file_path:
             return jsonify({'success': False, 'message': '缺少文件路径参数', 'data': None})
         
-        # 尝试获取文件图标
-        icon_data = file_manager.get_file_icon_data(file_path)
+        # 获取是否移除箭头的参数
+        remove_arrow_param = request.args.get('remove_arrow')
+        remove_arrow = None
+        if remove_arrow_param is not None:
+            # 转换为布尔值
+            remove_arrow = remove_arrow_param.lower() in ['true', '1', 't', 'y', 'yes']
+            print(f"接收到remove_arrow参数: {remove_arrow_param}, 转换为: {remove_arrow}")
+        
+        # 尝试获取文件图标，传递remove_arrow参数
+        icon_data = file_manager.get_file_icon_data(file_path, remove_arrow)
         
         if icon_data:
             return jsonify({'success': True, 'message': '成功获取图标数据', 'data': icon_data})
@@ -1067,6 +1075,28 @@ def clear_icon_cache():
                 old_size = len(system_manager._lnk_icon_cache) if isinstance(system_manager._lnk_icon_cache, dict) else '未知'
                 system_manager._lnk_icon_cache = {}
                 cleared.append(f"已清理系统管理器LNK缓存({old_size}项)")
+            
+            # 清理物理缓存目录中的文件
+            if hasattr(system_manager, 'cache_dir') and system_manager.cache_dir:
+                try:
+                    # 确保缓存目录存在
+                    if os.path.exists(system_manager.cache_dir):
+                        # 删除目录中的所有文件
+                        file_count = 0
+                        for filename in os.listdir(system_manager.cache_dir):
+                            file_path = os.path.join(system_manager.cache_dir, filename)
+                            if os.path.isfile(file_path):
+                                os.unlink(file_path)
+                                file_count += 1
+                        
+                        cleared.append(f"已删除缓存目录中的{file_count}个文件")
+                    else:
+                        # 如果目录不存在，则创建它
+                        os.makedirs(system_manager.cache_dir, exist_ok=True)
+                        cleared.append("创建了缓存目录")
+                except Exception as e:
+                    cleared.append(f"清理缓存目录时出错: {str(e)}")
+                    logger.error(f"清理缓存目录时出错: {str(e)}")
         
         # 强制进行垃圾回收
         try:
@@ -1150,6 +1180,11 @@ def clear_icon_cache_simple():
     try:
         global file_manager, system_manager
         
+        # 记录原始缓存目录
+        cache_dir = None
+        if 'system_manager' in globals() and system_manager is not None and hasattr(system_manager, 'cache_dir'):
+            cache_dir = system_manager.cache_dir
+        
         # 确保配置管理器存在
         if 'config_manager' in globals() and config_manager is not None:
             # 重新创建系统管理器
@@ -1166,6 +1201,33 @@ def clear_icon_cache_simple():
             # 替换全局变量
             system_manager = new_system_manager
             file_manager = new_file_manager
+            
+            # 清理物理缓存目录
+            try:
+                if cache_dir and os.path.exists(cache_dir):
+                    # 删除目录中的所有文件
+                    file_count = 0
+                    for filename in os.listdir(cache_dir):
+                        file_path = os.path.join(cache_dir, filename)
+                        if os.path.isfile(file_path):
+                            os.unlink(file_path)
+                            file_count += 1
+                    
+                    logger.info(f"已删除缓存目录中的{file_count}个文件")
+                else:
+                    # 使用新的系统管理器的缓存目录
+                    if hasattr(system_manager, 'cache_dir') and os.path.exists(system_manager.cache_dir):
+                        # 删除目录中的所有文件
+                        file_count = 0
+                        for filename in os.listdir(system_manager.cache_dir):
+                            file_path = os.path.join(system_manager.cache_dir, filename)
+                            if os.path.isfile(file_path):
+                                os.unlink(file_path)
+                                file_count += 1
+                        
+                        logger.info(f"已删除新缓存目录中的{file_count}个文件")
+            except Exception as e:
+                logger.error(f"清理缓存目录时出错: {str(e)}")
             
             logger.info("已重建管理器对象并清理图标缓存")
             
@@ -1187,6 +1249,31 @@ def clear_icon_cache_simple():
         return jsonify({
             "success": False,
             "message": f"重建管理器对象失败: {str(e)}"
+        }), 500
+
+@app.route('/api/icon-cache-path', methods=['GET'])
+def get_icon_cache_path():
+    """获取图标缓存目录路径"""
+    try:
+        if 'system_manager' in globals() and system_manager is not None and hasattr(system_manager, 'cache_dir'):
+            cache_dir = system_manager.cache_dir
+            # 检查目录是否存在
+            if not os.path.exists(cache_dir):
+                os.makedirs(cache_dir, exist_ok=True)
+                
+            return jsonify({
+                "success": True,
+                "data": cache_dir
+            }), 200
+        else:
+            return jsonify({
+                "success": False,
+                "message": "无法获取缓存目录信息"
+            }), 500
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "message": f"获取缓存目录时出错: {str(e)}"
         }), 500
 
 # 添加全局错误处理器

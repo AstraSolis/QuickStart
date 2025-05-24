@@ -91,6 +91,7 @@
 Application settings and file information are stored in database in the user directory:
 
 - Database file: `%APPDATA%\quickstart\quickstart.db`
+- Icon cache: `%APPDATA%\quickstart\icon_cache\`
 - Version information: `version.json` and `version.txt`
 
 ---
