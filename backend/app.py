@@ -186,7 +186,10 @@ def add_file():
     try:
         file_data = request.json
         file_paths = file_data.get("paths", [])
-        added_files = file_manager.add_files_from_list(file_paths)
+        # 获取append参数，默认为False
+        append_to_bottom = file_data.get("append", False)
+        # 调用文件管理器添加文件，传递append参数
+        added_files = file_manager.add_files_from_list(file_paths, append_to_bottom)
         
         return jsonify({
             "success": True,

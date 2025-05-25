@@ -132,6 +132,34 @@
   transform: translateX(3px);
 }
 
+/* 多选样式 */
+.file-item.multi-selected {
+  background-color: #eff7ff;
+  border-left: 3px solid #42a5f5;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transform: translateX(3px);
+}
+
+/* 拖拽样式 */
+.file-item.dragging {
+  opacity: 0.7;
+  background-color: #e1f5fe;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: scale(1.03);
+  z-index: 10;
+}
+
+.file-item.dragging-secondary {
+  opacity: 0.6;
+  background-color: #e3f2fd;
+  border-left: 3px dashed #42a5f5;
+}
+
+.file-item.drag-over-item {
+  border: 2px dashed #1E88E5;
+  background-color: #e8f5ff;
+}
+
 .file-name {
   flex: 1;
   margin-left: 10px;
@@ -150,6 +178,11 @@
 
 .file-item.selected .file-name {
   color: #1E88E5;
+  font-weight: 500;
+}
+
+.file-item.multi-selected .file-name {
+  color: #42a5f5;
   font-weight: 500;
 }
 

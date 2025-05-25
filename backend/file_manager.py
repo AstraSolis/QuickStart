@@ -42,12 +42,13 @@ class FileManager:
         # 添加图标缓存字典
         self._icon_cache = {}
 
-    def add_files_from_list(self, file_paths: List[str]) -> List[Dict[str, Any]]:
+    def add_files_from_list(self, file_paths: List[str], append_to_bottom: bool = False) -> List[Dict[str, Any]]:
         """
         从路径列表中添加文件
         
         Args:
             file_paths: 文件路径列表
+            append_to_bottom: 是否将文件添加到列表底部，True表示添加到底部，False表示按正常规则处理
             
         Returns:
             成功添加的文件信息列表
@@ -63,6 +64,8 @@ class FileManager:
         
         # 记录成功添加的文件
         added_files = []
+        # 如果指定添加到底部，则创建一个临时列表存储新添加的文件
+        temp_added_files = [] if append_to_bottom else None
         
         # 添加文件
         for file_path in file_paths:
@@ -88,24 +91,33 @@ class FileManager:
                     "params": "",
                     "in_tray": False  # 确保创建文件时包含in_tray字段
                 }
-
                 
-                # 添加到文件列表和存在路径集合
-                files.append(file_info)
+                # 根据append_to_bottom决定如何添加文件
+                if append_to_bottom:
+                    # 添加到临时列表，稍后一次性添加到文件列表底部
+                    temp_added_files.append(file_info)
+                else:
+                    # 直接添加到文件列表
+                    files.append(file_info)
+                
+                # 记录添加的文件和路径
                 existing_paths.add(file_path)
                 added_files.append(file_info)
-                
-                # 立即保存每个文件的添加，确保即使部分添加失败也能保存成功的部分
-                self.config_manager.save_config()  # 使用save_config方法强制保存
                 
             except Exception as e:
                 logger.error(f"添加文件时出错: {e}")
                 import traceback
                 traceback.print_exc()
                 continue
+        
+        # 如果使用了append_to_bottom且有文件需要添加，将临时列表中的文件添加到文件列表底部
+        if append_to_bottom and temp_added_files:
+            files.extend(temp_added_files)
 
         # 如果有文件被添加，确保再次统一保存最终版本
         if added_files:
+            # 更新配置文件中的文件列表
+            self.config_manager.set("files", files)
             result = self.config_manager.save_config()  # 使用save_config方法强制保存
             
             if not result:

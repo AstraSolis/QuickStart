@@ -774,12 +774,24 @@ function updateFileListUI() {
     
     // 添加选中状态类
     if (selectedFileIndices.includes(index)) {
-      fileItem.classList.add('selected');
+      if (selectedFileIndices.length > 1) {
+        fileItem.classList.add('multi-selected');
+      } else {
+        fileItem.classList.add('selected');
+      }
     }
     
     // 添加拖拽相关的属性和类
     fileItem.draggable = true;
     fileItem.dataset.index = index;
+    
+    // 绑定拖拽事件处理程序
+    fileItem.addEventListener('dragstart', handleDragStart);
+    fileItem.addEventListener('dragover', handleDragOver);
+    fileItem.addEventListener('dragenter', handleDragEnter);
+    fileItem.addEventListener('dragleave', handleDragLeave);
+    fileItem.addEventListener('drop', handleDrop);
+    fileItem.addEventListener('dragend', handleDragEnd);
     
     // 创建图标元素
     const fileIcon = document.createElement('div');
@@ -1086,8 +1098,10 @@ function handleFileDrop(event) {
       showLoading();
       
       // 发送到后端添加文件
+      // 设置append=true，确保文件添加到底部而不是排序
       axios.post(`${API_BASE_URL}/files`, {
-        paths: filePaths
+        paths: filePaths,
+        append: true  // 明确指示添加到底部
       })
         .then(response => {
           if (response.data.success) {
@@ -2616,9 +2630,77 @@ function handleDragStart(e) {
   e.dataTransfer.effectAllowed = 'move';
   e.dataTransfer.setData('text/plain', dragStartIndex);
   
+  // 检查当前项是否在多选中
+  if (selectedFileIndices.includes(dragStartIndex)) {
+    // 设置多选拖拽的数据
+    e.dataTransfer.setData('application/quickstart-multi-drag', JSON.stringify(selectedFileIndices));
+    
+    // 如果是多选拖拽，创建一个简单的自定义预览元素来显示所有选中的文件
+    if (selectedFileIndices.length > 1) {
+      // 创建一个容器，用于容纳所有选中的文件项
+      const container = document.createElement('div');
+      container.style.position = 'absolute';
+      container.style.left = '-1000px';
+      container.style.top = '-1000px';
+      container.style.width = `${this.offsetWidth}px`;
+      container.style.opacity = '0.8'; // 与单个拖拽时的透明度保持一致
+      container.style.zIndex = '9999';
+      container.style.background = 'transparent';
+      container.style.pointerEvents = 'none';
+      
+      // 向容器中添加所有选中的文件项（保持与原始文件项相同的样式）
+      selectedFileIndices.forEach(idx => {
+        const item = DOM.fileList.querySelector(`.file-item[data-index="${idx}"]`);
+        if (item) {
+          const clone = item.cloneNode(true);
+          clone.style.margin = '1px 0';
+          clone.style.borderRadius = '4px';
+          clone.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+          container.appendChild(clone);
+        }
+      });
+      
+      // 将容器添加到DOM
+      document.body.appendChild(container);
+      
+      // 设置自定义拖拽图像
+      e.dataTransfer.setDragImage(container, 10, 10);
+      
+      // 在下一个事件循环中移除预览元素
+      setTimeout(() => {
+        if (document.body.contains(container)) {
+          document.body.removeChild(container);
+        }
+      }, 0);
+    }
+  } else {
+    // 如果拖拽的不是多选项，则清除多选并只选中当前项
+    selectedFileIndices = [dragStartIndex];
+    // 清除其他选中项的样式
+    DOM.fileList.querySelectorAll('.file-item.multi-selected').forEach(item => {
+      item.classList.remove('multi-selected');
+    });
+    DOM.fileList.querySelectorAll('.file-item.selected').forEach(item => {
+      if (parseInt(item.dataset.index) !== dragStartIndex) {
+        item.classList.remove('selected');
+      }
+    });
+  }
+  
   // 添加拖拽样式
   setTimeout(() => {
     this.classList.add('dragging');
+    // 为所有被选中的项添加拖拽样式
+    if (selectedFileIndices.length > 1) {
+      selectedFileIndices.forEach(idx => {
+        if (idx !== dragStartIndex) {
+          const item = DOM.fileList.querySelector(`.file-item[data-index="${idx}"]`);
+          if (item) {
+            item.classList.add('dragging-secondary');
+          }
+        }
+      });
+    }
   }, 0);
 }
 
@@ -2656,6 +2738,18 @@ function handleDrop(e) {
   e.preventDefault();
   e.stopPropagation();
   
+  // 清除拖拽样式
+  this.classList.remove('drag-over-item');
+  
+  // 检查是否是从文件系统拖拽的文件
+  if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+    // 这是外部文件拖拽添加，委托给handleFileDrop处理
+    // 注意外部文件添加不执行排序，直接添加到列表底部
+    handleFileDrop(e);
+    return;
+  }
+  
+  // 内部拖拽排序逻辑
   // 防止在自身上放置
   if (draggedItem === this) {
     return;
@@ -2664,11 +2758,27 @@ function handleDrop(e) {
   // 获取目标索引
   const dropIndex = parseInt(this.dataset.index);
   
-  // 移除悬停效果
-  this.classList.remove('drag-over-item');
-  
-  // 更新文件顺序
-  updateFileOrder(dragStartIndex, dropIndex);
+  // 检查是否是多选拖拽
+  const multiDragData = e.dataTransfer.getData('application/quickstart-multi-drag');
+  if (multiDragData) {
+    try {
+      const dragIndices = JSON.parse(multiDragData);
+      // 检查目标索引是否在拖拽索引中
+      if (dragIndices.includes(dropIndex)) {
+        return; // 不能拖放到选中项自身
+      }
+      
+      // 处理多个文件的排序 - 修改为放到目标文件上面
+      updateMultipleFileOrder(dragIndices, dropIndex);
+    } catch (err) {
+      console.error('解析多选拖拽数据失败:', err);
+      // 退回到单个文件排序
+      updateFileOrder(dragStartIndex, dropIndex);
+    }
+  } else {
+    // 单个文件排序 - 修改为放到目标文件上面
+    updateFileOrder(dragStartIndex, dropIndex);
+  }
 }
 
 // 拖拽结束
@@ -2678,6 +2788,11 @@ function handleDragEnd(e) {
   
   // 移除所有拖拽相关样式
   this.classList.remove('dragging');
+  
+  // 清除所有多选项的拖拽样式
+  document.querySelectorAll('.file-item.dragging-secondary').forEach(item => {
+    item.classList.remove('dragging-secondary');
+  });
   
   // 清除所有悬停效果
   document.querySelectorAll('.file-item').forEach(item => {
@@ -2694,13 +2809,51 @@ function updateFileOrder(fromIndex, toIndex) {
   // 显示加载状态
   showLoading();
   
+  // 只保留当前拖拽的文件索引，用于恢复选中状态
+  const draggedFilePath = fileList[fromIndex]?.path;
+  
   // 调用后端API更新文件顺序
-  axios.put(`${API_BASE_URL}/files/order/${fromIndex}/${toIndex}`)
+  // 修改调用方式，直接把文件放到目标位置，不再需要放到目标文件下面
+  axios.put(`${API_BASE_URL}/files/order/${fromIndex}/${toIndex}`, {
+    place_before: true // 添加标记表示放在目标文件前面
+  })
     .then(response => {
       if (response.data.success) {
-        // 重新加载文件列表
-        loadFileList();
-        showMessage('file_order_updated', 'success');
+        // 重新加载文件列表，在回调中处理选中状态
+        axios.get(`${API_BASE_URL}/files/with-icons`)
+          .then(response => {
+            if (response.data.success) {
+              // 更新文件列表
+              fileList = response.data.data || [];
+              
+              // 查找拖拽文件的新位置
+              const newIndex = fileList.findIndex(file => file.path === draggedFilePath);
+              if (newIndex !== -1) {
+                // 只选中拖拽的文件
+                selectedFileIndices = [newIndex];
+              }
+              
+              // 更新UI
+              updateFileListUI();
+              
+              // 如果文件列表不为空，显示拖拽排序提示
+              if (fileList.length > 1) {
+                showDragSortTip();
+              }
+              
+              hideLoading();
+              showMessage('file_order_updated', 'success');
+            } else {
+              hideLoading();
+              console.error('获取文件列表失败:', response.data.message);
+              showMessage('fetch_files_failed', 'error');
+            }
+          })
+          .catch(error => {
+            hideLoading();
+            console.error('请求文件列表时出错:', error);
+            showMessage('fetch_files_failed', 'error');
+          });
       } else {
         hideLoading();
         showMessage(response.data.message || 'update_file_order_failed', 'error');
@@ -2708,6 +2861,108 @@ function updateFileOrder(fromIndex, toIndex) {
     })
     .catch(error => {
       console.error('Failed to update file order:', error);
+      hideLoading();
+      showMessage('update_file_order_failed', 'error');
+    });
+}
+
+// 更新多个文件的顺序
+function updateMultipleFileOrder(fromIndices, toIndex) {
+  // 显示加载状态
+  showLoading();
+  
+  // 保存被拖拽的文件路径，用于恢复选中状态
+  const draggedFilePaths = fromIndices.map(idx => fileList[idx]?.path).filter(Boolean);
+  
+  // 首先对索引进行排序（升序）
+  fromIndices.sort((a, b) => a - b);
+  
+  // 从文件列表中提取选中的文件信息
+  const selectedFiles = fromIndices.map(index => fileList[index]);
+  
+  // 创建一个包含所有文件路径的新数组，首先复制当前的文件列表
+  const newFileOrder = fileList.map(file => file.path);
+  
+  // 调整位置：首先删除所有选中的文件路径
+  fromIndices.reverse().forEach(index => {
+    newFileOrder.splice(index, 1);
+  });
+  
+  // 检查目标位置在移除选中项后的偏移
+  // 需要调整目标索引，因为移除前面的项会影响后面的索引
+  let adjustedToIndex = toIndex;
+  fromIndices.forEach(fromIndex => {
+    if (fromIndex < toIndex) {
+      adjustedToIndex--;
+    }
+  });
+  
+  // 重新插入所有选中的文件路径到目标位置（放在目标文件上面）
+  const filePaths = selectedFiles.map(file => file.path);
+  newFileOrder.splice(adjustedToIndex, 0, ...filePaths);
+  
+  // 调用后端API更新完整的文件顺序
+  axios.put(`${API_BASE_URL}/files/full-order`, {
+    paths: newFileOrder,
+    place_before: true // 添加标记表示放在目标文件前面
+  })
+    .then(response => {
+      if (response.data.success) {
+        // 重新加载文件列表，在回调中处理选中状态
+        axios.get(`${API_BASE_URL}/files/with-icons`)
+          .then(response => {
+            if (response.data.success) {
+              // 更新文件列表
+              fileList = response.data.data || [];
+              
+              // 查找拖拽文件的新位置
+              const newIndices = [];
+              draggedFilePaths.forEach(path => {
+                const idx = fileList.findIndex(file => file.path === path);
+                if (idx !== -1) {
+                  newIndices.push(idx);
+                }
+              });
+              
+              // 只选中拖拽的文件
+              if (newIndices.length > 0) {
+                selectedFileIndices = newIndices;
+              }
+              
+              // 更新UI
+              updateFileListUI();
+              
+              // 如果文件列表不为空，显示拖拽排序提示
+              if (fileList.length > 1) {
+                showDragSortTip();
+              }
+              
+              hideLoading();
+              
+              // 显示成功消息
+              if (draggedFilePaths.length > 1) {
+                showMessage(translations['multi_file_order_updated'] || '多个文件顺序已更新', 'success');
+              } else {
+                showMessage('file_order_updated', 'success');
+              }
+            } else {
+              hideLoading();
+              console.error('获取文件列表失败:', response.data.message);
+              showMessage('fetch_files_failed', 'error');
+            }
+          })
+          .catch(error => {
+            hideLoading();
+            console.error('请求文件列表时出错:', error);
+            showMessage('fetch_files_failed', 'error');
+          });
+      } else {
+        hideLoading();
+        showMessage(response.data.message || 'update_file_order_failed', 'error');
+      }
+    })
+    .catch(error => {
+      console.error('Failed to update multiple file order:', error);
       hideLoading();
       showMessage('update_file_order_failed', 'error');
     });
