@@ -93,8 +93,35 @@ function Build-Frontend {
 function Build-Backend {
     Write-ColorOutput Green "构建后端..."
     
+    # 检查UPX是否可用
+    $upxAvailable = $false
+    $upxPath = $null
+    
+    try {
+        $upxVersion = upx --version
+        $upxAvailable = $true
+        $upxPath = (Get-Command upx).Path
+        Write-ColorOutput Green "已检测到UPX，将用于压缩可执行文件"
+        Write-ColorOutput Green "UPX版本: $upxVersion"
+    }
+    catch {
+        Write-ColorOutput Yellow "未检测到UPX，将使用默认压缩"
+    }
+    
+    # 构建命令
+    $buildCmd = "pyinstaller build/pyinstaller.spec --clean"
+    
+    # 如果UPX可用，添加相关参数
+    if ($upxAvailable) {
+        $upxDir = Split-Path -Parent $upxPath
+        $buildCmd += " --upx-dir `"$upxDir`""
+        # 设置UPX环境变量以使用最高压缩级别
+        $env:UPX = "--best --lzma"
+        Write-ColorOutput Green "已设置UPX使用最高压缩级别"
+    }
+    
     # 使用 PyInstaller 构建
-    pyinstaller build/pyinstaller.spec --clean
+    Invoke-Expression $buildCmd
 }
 
 # 复制额外文件

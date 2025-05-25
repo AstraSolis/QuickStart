@@ -307,12 +307,33 @@ class BuildManager:
         self.print_colored("构建后端...", "cyan")
         
         try:
-            # 使用 PyInstaller 构建
-            subprocess.run([
+            # 检查UPX是否可用
+            upx_available = False
+            upx_path = None
+            try:
+                upx_result = subprocess.run(["upx", "--version"], capture_output=True, text=True)
+                if upx_result.returncode == 0:
+                    upx_available = True
+                    self.print_colored("已检测到UPX，将用于压缩可执行文件", "green")
+            except FileNotFoundError:
+                self.print_colored("未检测到UPX，将使用默认压缩", "yellow")
+            
+            # 构建命令
+            build_cmd = [
                 "pyinstaller",
                 str(self.build_dir / "pyinstaller.spec"),
                 "--clean"
-            ], check=True)
+            ]
+            
+            # 如果UPX可用，添加相关参数
+            if upx_available:
+                build_cmd.extend(["--upx-dir", os.path.dirname(shutil.which("upx") or "upx")])
+                # 设置UPX压缩级别（9为最高压缩率）
+                os.environ["UPX"] = "--best --lzma"
+                self.print_colored("已设置UPX使用最高压缩级别", "green")
+            
+            # 使用 PyInstaller 构建
+            subprocess.run(build_cmd, check=True)
             return True
         except subprocess.CalledProcessError as e:
             self.print_colored(f"构建后端失败: {str(e)}", "red")
