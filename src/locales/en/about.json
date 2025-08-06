@@ -1,0 +1,154 @@
+{
+  "title": "About QuickStart",
+  "app": {
+    "name": "QuickStart",
+    "description": "Powerful file quick launcher tool",
+    "version": "v1.0.0-beta"
+  },
+  "project": {
+    "title": "Project Overview",
+    "description": "QuickStart - Powerful file quick launcher tool, built with TypeScript + React + Electron architecture, integrated with Ant Design UI framework and Apple-style design",
+    "description1": "QuickStart is a modern desktop application developed based on Electron and React technology stack, designed to provide users with fast and convenient file and application launching experience.",
+    "description2": "Adopting TypeScript + React + Electron architecture, integrating Ant Design UI framework and Apple-style design language, bringing users an elegant and efficient user experience.",
+    "author": {
+      "name": "开发者:AstraSolis"
+    },
+    "architecture": {
+      "javascript": "TypeScript + React + Electron",
+      "ui": "Ant Design UI Framework",
+      "design": "Apple-style Design Language"
+    }
+  },
+  "techStack": {
+    "title": "Technology Stack",
+    "electron": "Electron 27+",
+    "react": "React 18",
+    "typescript": "TypeScript",
+    "antd": "Ant Design 5",
+    "i18next": "i18next",
+    "webpack": "Webpack 5",
+    "nodejs": "Node.js",
+    "css3": "CSS3"
+  },
+  "features": {
+    "title": "Core Features",
+    "styling": {
+      "title": "🎨 Powerful Styling System",
+      "description": "Support theme switching, custom colors, font configuration"
+    },
+    "i18n": {
+      "title": "🌍 Internationalization Support",
+      "description": "Support Chinese, English, Russian, French languages"
+    },
+    "design": {
+      "title": "🍎 Apple-style Design",
+      "description": "Frosted glass effects, elegant animations, modern interface"
+    },
+    "performance": {
+      "title": "⚡ High Performance Architecture",
+      "description": "Virtual scrolling, lazy loading, GPU acceleration"
+    }
+  },
+  "system": {
+    "title": "System Information",
+    "electron": "Electron Version",
+    "node": "Node.js Version",
+    "chrome": "Chrome Version"
+  },
+  "actions": {
+    "title": "Actions",
+    "quick_actions": "Quick Actions",
+    "version_info": "Version Info & Actions",
+    "open_source": "Open Source",
+    "github": "View Source",
+    "feedback": "Report Issues",
+    "support": "Support Project"
+  },
+  "copyright": {
+    "title": "Copyright Information",
+    "text": "© 2024 开发者:AstraSolis. All rights reserved.",
+    "license": "Open source under MIT License",
+    "disclaimer": "This software is provided \\\"as is\\\", without warranty of any kind, express or implied."
+  },
+  "tabs": {
+    "overview": "Overview",
+    "acknowledgments": "Acknowledgments",
+    "copyright": "Copyright",
+    "support": "Support"
+  },
+  "version": {
+    "title": "Version Information",
+    "app": "App Version",
+    "build_date": "Build Date",
+    "build_date_value": "2025-07-05",
+    "build_number": "Build Number",
+    "build_number_value": "Build 2025070501",
+    "environment": "Environment",
+    "environment_value": "Production"
+  },
+  "acknowledgments": {
+    "title": "Acknowledgments",
+    "description": "Thanks to the following open source projects and technology stack",
+    "tech_stack": {
+      "electron": {
+        "name": "Electron",
+        "description": "Cross-platform desktop app development framework",
+        "url": "https://www.electronjs.org/"
+      },
+      "react": {
+        "name": "React",
+        "description": "JavaScript library for building user interfaces",
+        "url": "https://reactjs.org/"
+      },
+      "typescript": {
+        "name": "TypeScript",
+        "description": "Superset of JavaScript with static typing",
+        "url": "https://www.typescriptlang.org/"
+      },
+      "antd": {
+        "name": "Ant Design",
+        "description": "Enterprise UI design language and React components",
+        "url": "https://ant.design/"
+      },
+      "i18next": {
+        "name": "i18next",
+        "description": "Internationalization framework",
+        "url": "https://www.i18next.com/"
+      },
+      "webpack": {
+        "name": "Webpack",
+        "description": "Module bundler",
+        "url": "https://webpack.js.org/"
+      },
+      "nodejs": {
+        "name": "Node.js",
+        "description": "JavaScript runtime environment",
+        "url": "https://nodejs.org/"
+      },
+      "sqlite": {
+        "name": "Better SQLite3",
+        "description": "High-performance SQLite database driver",
+        "url": "https://github.com/WiseLibs/better-sqlite3"
+      },
+      "jest": {
+        "name": "Jest",
+        "description": "JavaScript testing framework",
+        "url": "https://jestjs.io/"
+      },
+      "eslint": {
+        "name": "ESLint",
+        "description": "JavaScript linting tool",
+        "url": "https://eslint.org/"
+      },
+      "prettier": {
+        "name": "Prettier",
+        "description": "Code formatter",
+        "url": "https://prettier.io/"
+      }
+    }
+  },
+  "support": {
+    "title": "Support Project",
+    "description": "If you find this project helpful, please consider supporting our development work."
+  }
+}

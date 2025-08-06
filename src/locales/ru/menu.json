@@ -1,0 +1,84 @@
+{
+  "main": {
+    "files": "Список файлов",
+    "styles": "Настройки стилей",
+    "settings": "Настройки приложения",
+    "about": "О программе",
+    "menu": "Меню"
+  },
+  "file": {
+    "addFile": "Добавить файл",
+    "addFolder": "Добавить папку",
+    "removeFile": "Удалить файл",
+    "openFile": "Открыть файл",
+    "openFolder": "Открыть папку",
+    "showInExplorer": "Показать в проводнике",
+    "copyPath": "Копировать путь",
+    "properties": "Свойства",
+    "rename": "Переименовать",
+    "delete": "Удалить",
+    "refresh": "Обновить",
+    "selectAll": "Выбрать все",
+    "clearAll": "Очистить список",
+    "sortBy": "Сортировать по",
+    "sortByName": "По имени",
+    "sortByDate": "По дате",
+    "sortBySize": "По размеру",
+    "sortByType": "По типу",
+    "viewMode": "Режим просмотра",
+    "listView": "Список",
+    "gridView": "Сетка",
+    "compactView": "Компактный"
+  },
+  "edit": {
+    "undo": "Отменить",
+    "redo": "Повторить",
+    "cut": "Вырезать",
+    "copy": "Копировать",
+    "paste": "Вставить",
+    "selectAll": "Выбрать все",
+    "find": "Найти",
+    "replace": "Заменить",
+    "preferences": "Настройки"
+  },
+  "view": {
+    "reload": "Перезагрузить",
+    "forceReload": "Принудительная перезагрузка",
+    "toggleDevTools": "Инструменты разработчика",
+    "actualSize": "Реальный размер",
+    "zoomIn": "Увеличить",
+    "zoomOut": "Уменьшить",
+    "toggleFullscreen": "Полноэкранный режим",
+    "sidebar": "Боковая панель",
+    "statusBar": "Строка состояния",
+    "toolbar": "Панель инструментов"
+  },
+  "window": {
+    "minimize": "Свернуть",
+    "close": "Закрыть",
+    "newWindow": "Новое окно",
+    "closeWindow": "Закрыть окно",
+    "alwaysOnTop": "Поверх всех окон",
+    "bringAllToFront": "Все окна на передний план"
+  },
+  "help": {
+    "about": "О QuickStart",
+    "checkForUpdates": "Проверить обновления",
+    "documentation": "Документация",
+    "shortcuts": "Горячие клавиши",
+    "reportIssue": "Сообщить о проблеме",
+    "contactSupport": "Связаться с поддержкой",
+    "releaseNotes": "Примечания к выпуску",
+    "license": "Лицензия"
+  },
+  "context": {
+    "open": "Открыть",
+    "openWith": "Открыть с помощью",
+    "runAsAdmin": "Запустить от имени администратора",
+    "addToFavorites": "Добавить в избранное",
+    "removeFromFavorites": "Удалить из избранного",
+    "pin": "Закрепить",
+    "unpin": "Открепить",
+    "properties": "Свойства"
+  }
+}

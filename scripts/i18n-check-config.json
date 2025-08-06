@@ -1,0 +1,58 @@
+{
+  "_description": "i18next翻译键一致性检查配置文件",
+  "_version": "1.0.0",
+  
+  "locales": {
+    "_comment": "语言文件配置",
+    "baseDir": "src/locales",
+    "languages": ["zh-CN", "en", "ru", "fr"],
+    "referenceLang": "zh-CN",
+    "namespaces": ["common", "menu", "theme", "settings", "errors", "file", "about", "config", "startup"],
+    "fileExtension": ".json"
+  },
+
+  "rules": {
+    "_comment": "检查规则配置",
+    "severity": {
+      "missingKey": "HIGH",
+      "extraKey": "MEDIUM", 
+      "typeMismatch": "HIGH",
+      "structureMismatch": "CRITICAL"
+    },
+    "ignorePatterns": [
+      "^temp\\.",
+      "^debug\\.",
+      "^_comment"
+    ],
+    "ignoreNamespaces": [],
+    "ignoreLanguages": []
+  },
+
+  "report": {
+    "_comment": "报告配置",
+    "format": "console",
+    "outputPath": "reports/i18n-check-report",
+    "verbose": false,
+    "showSuccess": false,
+    "groupBySeverity": true,
+    "groupByLanguage": false,
+    "groupByNamespace": false
+  },
+
+  "fix": {
+    "_comment": "自动修复配置",
+    "enabled": true,
+    "createBackup": true,
+    "backupDir": "backups/i18n",
+    "autoFixTypes": ["MISSING_KEY"],
+    "missingKeyPlaceholder": "{{NEEDS_TRANSLATION}}",
+    "interactive": true
+  },
+
+  "performance": {
+    "_comment": "性能配置",
+    "concurrency": 4,
+    "enableCache": true,
+    "cacheDir": ".cache/i18n-checker"
+  }
+}

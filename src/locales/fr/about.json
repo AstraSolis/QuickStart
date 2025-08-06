@@ -1,0 +1,154 @@
+{
+  "title": "À propos de QuickStart",
+  "app": {
+    "name": "QuickStart",
+    "description": "Outil puissant de lancement rapide de fichiers",
+    "version": "v1.0.0-beta"
+  },
+  "project": {
+    "title": "Aperçu du projet",
+    "description": "QuickStart - Outil puissant de lancement rapide de fichiers, construit avec l'architecture TypeScript + React + Electron, intégré avec le framework UI Ant Design et le design de style Apple",
+    "description1": "QuickStart est une application de bureau moderne développée sur la base des technologies Electron et React, conçue pour offrir aux utilisateurs une expérience de lancement rapide et pratique de fichiers et d'applications.",
+    "description2": "Adoptant l'architecture TypeScript + React + Electron, intégrant le framework UI Ant Design et le langage de conception de style Apple, apportant aux utilisateurs une expérience utilisateur élégante et efficace.",
+    "author": {
+      "name": "开发者:AstraSolis"
+    },
+    "architecture": {
+      "javascript": "TypeScript + React + Electron",
+      "ui": "Framework UI Ant Design",
+      "design": "Langage de conception de style Apple"
+    }
+  },
+  "techStack": {
+    "title": "Stack technologique",
+    "electron": "Electron 27+",
+    "react": "React 18",
+    "typescript": "TypeScript",
+    "antd": "Ant Design 5",
+    "i18next": "i18next",
+    "webpack": "Webpack 5",
+    "nodejs": "Node.js",
+    "css3": "CSS3"
+  },
+  "features": {
+    "title": "Fonctionnalités principales",
+    "styling": {
+      "title": "🎨 Système de style puissant",
+      "description": "Support du changement de thème, couleurs personnalisées, configuration de police"
+    },
+    "i18n": {
+      "title": "🌍 Support d'internationalisation",
+      "description": "Support des langues chinoise, anglaise, russe, française"
+    },
+    "design": {
+      "title": "🍎 Design de style Apple",
+      "description": "Effets de verre dépoli, animations élégantes, interface moderne"
+    },
+    "performance": {
+      "title": "⚡ Architecture haute performance",
+      "description": "Défilement virtuel, chargement paresseux, accélération GPU"
+    }
+  },
+  "system": {
+    "title": "Informations système",
+    "electron": "Version Electron",
+    "node": "Version Node.js",
+    "chrome": "Version Chrome"
+  },
+  "actions": {
+    "title": "Actions",
+    "quick_actions": "Actions rapides",
+    "version_info": "Informations de version et actions",
+    "open_source": "Open Source",
+    "github": "Voir le code source",
+    "feedback": "Signaler des problèmes",
+    "support": "Soutenir le projet"
+  },
+  "copyright": {
+    "title": "Informations sur les droits d'auteur",
+    "text": "© 2024 开发者:AstraSolis. Tous droits réservés.",
+    "license": "Open source sous licence MIT",
+    "disclaimer": "Ce logiciel est fourni \\\"tel quel\\\", sans garantie d'aucune sorte, expresse ou implicite."
+  },
+  "tabs": {
+    "overview": "Aperçu",
+    "acknowledgments": "Remerciements",
+    "copyright": "Droits d'auteur",
+    "support": "Support"
+  },
+  "version": {
+    "title": "Informations de version",
+    "app": "Version de l'application",
+    "build_date": "Date de construction",
+    "build_date_value": "2025-07-05",
+    "build_number": "Numéro de construction",
+    "build_number_value": "Build 2025070501",
+    "environment": "Environnement",
+    "environment_value": "Production"
+  },
+  "acknowledgments": {
+    "title": "Remerciements",
+    "description": "Merci aux projets open source suivants et à la pile technologique",
+    "tech_stack": {
+      "electron": {
+        "name": "Electron",
+        "description": "Framework de développement d'applications de bureau multiplateformes",
+        "url": "https://www.electronjs.org/"
+      },
+      "react": {
+        "name": "React",
+        "description": "Bibliothèque JavaScript pour créer des interfaces utilisateur",
+        "url": "https://reactjs.org/"
+      },
+      "typescript": {
+        "name": "TypeScript",
+        "description": "Surensemble de JavaScript avec typage statique",
+        "url": "https://www.typescriptlang.org/"
+      },
+      "antd": {
+        "name": "Ant Design",
+        "description": "Langage de conception UI d'entreprise et composants React",
+        "url": "https://ant.design/"
+      },
+      "i18next": {
+        "name": "i18next",
+        "description": "Framework d'internationalisation",
+        "url": "https://www.i18next.com/"
+      },
+      "webpack": {
+        "name": "Webpack",
+        "description": "Bundler de modules",
+        "url": "https://webpack.js.org/"
+      },
+      "nodejs": {
+        "name": "Node.js",
+        "description": "Environnement d'exécution JavaScript",
+        "url": "https://nodejs.org/"
+      },
+      "sqlite": {
+        "name": "Better SQLite3",
+        "description": "Pilote de base de données SQLite haute performance",
+        "url": "https://github.com/WiseLibs/better-sqlite3"
+      },
+      "jest": {
+        "name": "Jest",
+        "description": "Framework de test JavaScript",
+        "url": "https://jestjs.io/"
+      },
+      "eslint": {
+        "name": "ESLint",
+        "description": "Outil de vérification de code JavaScript",
+        "url": "https://eslint.org/"
+      },
+      "prettier": {
+        "name": "Prettier",
+        "description": "Formateur de code",
+        "url": "https://prettier.io/"
+      }
+    }
+  },
+  "support": {
+    "title": "Soutenir le projet",
+    "description": "Si vous trouvez ce projet utile, veuillez envisager de soutenir notre travail de développement."
+  }
+}

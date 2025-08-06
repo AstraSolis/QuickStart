@@ -1,0 +1,66 @@
+{
+  "panel": {
+    "title": "Gestion de la configuration",
+    "description": "Gérer les divers paramètres de configuration de l'application"
+  },
+  "actions": {
+    "openConfigDir": "Ouvrir le répertoire de configuration",
+    "resetAllConfigs": "Réinitialiser toutes les configurations"
+  },
+  "messages": {
+    "cannotOpenConfigDir": "Impossible d'ouvrir le répertoire de configuration",
+    "configSaved": "Configuration sauvegardée",
+    "configSaveFailed": "Échec de la sauvegarde de la configuration",
+    "loadBackupsFailed": "Échec du chargement de la liste des sauvegardes",
+    "restoreSuccess": "Configuration restaurée avec succès",
+    "restoreFailed": "Échec de la restauration de la configuration",
+    "downloadInProgress": "La fonction de téléchargement est en cours de développement..."
+  },
+  "info": {
+    "configLocation": "Emplacement du fichier de configuration",
+    "appDataDir": "Répertoire des données d'application",
+    "configDir": "Répertoire de configuration"
+  },
+  "tabs": {
+    "backupManagement": "Gestion des sauvegardes"
+  },
+  "backup": {
+    "title": "Gestion des sauvegardes de configuration",
+    "description": "Afficher et gérer les sauvegardes historiques des fichiers de configuration",
+    "totalBackups": "Total des sauvegardes",
+    "totalSize": "Taille totale",
+    "configTypes": "Types de configuration",
+    "latestBackup": "Dernière sauvegarde",
+    "selectConfigType": "Sélectionner le type de configuration",
+    "confirmRestore": "Êtes-vous sûr de vouloir restaurer cette configuration ?",
+    "restoreWarning": "La configuration actuelle sera écrasée. Il est recommandé de créer d'abord une sauvegarde.",
+    "restoreTooltip": "Restaurer cette configuration",
+    "downloadTooltip": "Télécharger le fichier de sauvegarde",
+    "noBackups": "Aucune",
+    "infoTitle": "Informations de sauvegarde",
+    "infoDescription": "Le système crée automatiquement des sauvegardes lors de la modification des fichiers de configuration. Vous pouvez sélectionner n'importe quel point de sauvegarde pour restaurer la configuration, mais notez que cela écrasera les paramètres actuels.",
+    "paginationText": "{{start}}-{{end}} sur {{total}} sauvegardes"
+  },
+  "configTypes": {
+    "appSettings": "Paramètres d'application",
+    "themeConfig": "Configuration du thème",
+    "layoutConfig": "Configuration de la mise en page",
+    "i18nConfig": "Configuration d'internationalisation",
+    "userPreferences": "Préférences utilisateur"
+  },
+  "table": {
+    "filename": "Nom du fichier",
+    "version": "Version",
+    "timestamp": "Heure de création",
+    "configType": "Type de configuration",
+    "size": "Taille",
+    "checksum": "Somme de contrôle",
+    "actions": "Actions",
+    "description": "Description"
+  },
+  "common": {
+    "confirm": "Confirmer",
+    "cancel": "Annuler",
+    "types": "types"
+  }
+}

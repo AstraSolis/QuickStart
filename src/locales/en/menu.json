@@ -1,0 +1,84 @@
+{
+  "main": {
+    "files": "File List",
+    "styles": "Styles",
+    "settings": "Settings",
+    "about": "About",
+    "menu": "Menu"
+  },
+  "file": {
+    "addFile": "Add File",
+    "addFolder": "Add Folder",
+    "removeFile": "Remove File",
+    "openFile": "Open File",
+    "openFolder": "Open Folder",
+    "showInExplorer": "Show in Explorer",
+    "copyPath": "Copy Path",
+    "properties": "Properties",
+    "rename": "Rename",
+    "delete": "Delete",
+    "refresh": "Refresh",
+    "selectAll": "Select All",
+    "clearAll": "Clear List",
+    "sortBy": "Sort By",
+    "sortByName": "Sort by Name",
+    "sortByDate": "Sort by Date",
+    "sortBySize": "Sort by Size",
+    "sortByType": "Sort by Type",
+    "viewMode": "View Mode",
+    "listView": "List View",
+    "gridView": "Grid View",
+    "compactView": "Compact View"
+  },
+  "edit": {
+    "undo": "Undo",
+    "redo": "Redo",
+    "cut": "Cut",
+    "copy": "Copy",
+    "paste": "Paste",
+    "selectAll": "Select All",
+    "find": "Find",
+    "replace": "Replace",
+    "preferences": "Preferences"
+  },
+  "view": {
+    "reload": "Reload",
+    "forceReload": "Force Reload",
+    "toggleDevTools": "Toggle Developer Tools",
+    "actualSize": "Actual Size",
+    "zoomIn": "Zoom In",
+    "zoomOut": "Zoom Out",
+    "toggleFullscreen": "Toggle Fullscreen",
+    "sidebar": "Sidebar",
+    "statusBar": "Status Bar",
+    "toolbar": "Toolbar"
+  },
+  "window": {
+    "minimize": "Minimize",
+    "close": "Close",
+    "newWindow": "New Window",
+    "closeWindow": "Close Window",
+    "alwaysOnTop": "Always on Top",
+    "bringAllToFront": "Bring All to Front"
+  },
+  "help": {
+    "about": "About QuickStart",
+    "checkForUpdates": "Check for Updates",
+    "documentation": "Documentation",
+    "shortcuts": "Keyboard Shortcuts",
+    "reportIssue": "Report Issue",
+    "contactSupport": "Contact Support",
+    "releaseNotes": "Release Notes",
+    "license": "License"
+  },
+  "context": {
+    "open": "Open",
+    "openWith": "Open With",
+    "runAsAdmin": "Run as Administrator",
+    "addToFavorites": "Add to Favorites",
+    "removeFromFavorites": "Remove from Favorites",
+    "pin": "Pin",
+    "unpin": "Unpin",
+    "properties": "Properties"
+  }
+}

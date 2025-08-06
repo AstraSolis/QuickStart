@@ -1,0 +1,202 @@
+{
+  "name": "quickstart",
+  "version": "1.0.0",
+  "description": "QuickStart - 强大的文件快速启动工具，采用TypeScript + React + Electron架构，集成Ant Design UI框架和Apple风格设计",
+  "main": "build/main/main.js",
+  "homepage": "./",
+  "author": {
+    "name": "开发者:AstraSolis"
+  },
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "npm run build && npm run start:prod",
+    "start:prod": "chcp 65001 && cross-env NODE_ENV=production electron --disable-software-rasterizer .",
+    "start:with-check": "npm run build && npm run startup-check && npm run start:prod",
+    "dev": "concurrently -k -n \"RENDERER,MAIN,PRELOAD,ELECTRON,TYPES\" -c \"bgBlue.bold,bgMagenta.bold,bgCyan.bold,bgGreen.bold,bgYellow.bold\" \"npm run dev:renderer\" \"npm run watch:main\" \"npm run watch:preload\" \"npm run start:dev\" \"npm run type-check:watch\"",
+    "dev:renderer": "webpack serve --config webpack.renderer.config.js --port 3000 --open --history-api-fallback",
+    "watch:main": "cross-env NODE_ENV=development SOURCE_MAP=true webpack --watch --config webpack.main.config.js --stats-error-details",
+    "watch:preload": "cross-env NODE_ENV=development SOURCE_MAP=true webpack --watch --config webpack.preload.config.js --stats-error-details",
+    "start:dev": "chcp 65001 && cross-env NODE_ENV=development NODE_OPTIONS=--max_old_space_size=4096 wait-on build/main/main.js build/preload/preload.js http-get://localhost:3000 && nodemon --delay 1000 --watch build --exec \"electron --no-sandbox .\" --ext js",
+    "build": "npm run clean:build && npm run build:renderer && npm run build:main && npm run build:preload && npm run copy:locales",
+    "copy:locales": "node -e \"const fs = require('fs'); const path = require('path'); const srcDir = 'src/locales'; const destDir = 'build/locales'; if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, {recursive: true}); fs.readdirSync(srcDir).forEach(lang => { const langSrc = path.join(srcDir, lang); const langDest = path.join(destDir, lang); if (fs.statSync(langSrc).isDirectory()) { if (!fs.existsSync(langDest)) fs.mkdirSync(langDest, {recursive: true}); fs.readdirSync(langSrc).forEach(file => { if (file.endsWith('.json')) { fs.copyFileSync(path.join(langSrc, file), path.join(langDest, file)); console.log('Copied:', path.join(langSrc, file), '->', path.join(langDest, file)); } }); } });\"",
+    "clean:build": "rimraf build",
+    "build:main": "cross-env NODE_ENV=production webpack --config webpack.main.config.js",
+    "build:preload": "cross-env NODE_ENV=production webpack --config webpack.preload.config.js",
+    "build:renderer": "cross-env NODE_ENV=production webpack --config webpack.renderer.config.js",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win",
+    "dist:mac": "electron-builder --mac",
+    "dist:linux": "electron-builder --linux",
+    "clean": "rimraf dist build node_modules/.cache",
+    "clean:cache": "npm run clean && rimraf node_modules/.cache webpack-cache",
+    "lint": "eslint src --ext .js,.jsx,.ts,.tsx",
+    "lint:fix": "eslint src --ext .js,.jsx,.ts,.tsx --fix",
+    "type-check": "tsc --noEmit --project tsconfig.json",
+    "type-check:watch": "tsc --noEmit --watch --project tsconfig.json",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "startup-check": "node scripts/startup-check.js",
+    "debug": "chcp 65001 && cross-env NODE_ENV=development DEBUG=* electron .",
+    "debug:main": "chcp 65001 && cross-env NODE_ENV=development electron --inspect=9229 .",
+    "debug:renderer": "chcp 65001 && cross-env NODE_ENV=development electron --inspect-brk=9229 .",
+    "profile": "cross-env NODE_ENV=development ELECTRON_ENABLE_LOGGING=true electron .",
+    "stats": "cross-env NODE_ENV=production webpack --config webpack.renderer.config.js --json > stats.json && webpack-bundle-analyzer stats.json",
+    "postinstall": "node scripts/generate-env.js",
+    "i18n:check": "node scripts/check-i18n.js",
+    "i18n:check:report": "node scripts/check-i18n.js --format=html --output=reports/i18n-check.html",
+    "i18n:check:json": "node scripts/check-i18n.js --format=json --output=reports/i18n-check.json",
+    "i18n:fix": "node scripts/check-i18n.js fix",
+    "i18n:fix:dry-run": "node scripts/check-i18n.js fix --dry-run",
+    "i18n:stats": "node scripts/check-i18n.js stats",
+    "i18n:init": "node scripts/check-i18n.js init",
+    "i18n:validate-config": "node scripts/check-i18n.js validate-config",
+    "i18n:reset-language": "node scripts/reset-language.js"
+  },
+  "dependencies": {
+    "@ant-design/v5-patch-for-react-19": "^1.0.3",
+    "@types/uuid": "^10.0.0",
+    "antd": "^5.26.3",
+    "better-sqlite3": "^12.2.0",
+    "chokidar": "^4.0.3",
+    "colord": "^2.9.3",
+    "dayjs": "^1.11.13",
+    "electron": "37.2.0",
+    "electron-log": "^5.4.1",
+    "electron-store": "^10.1.0",
+    "electron-updater": "^6.6.2",
+    "i18next": "^25.3.0",
+    "i18next-browser-languagedetector": "^8.2.0",
+    "neo-async": "^2.6.2",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-i18next": "^15.5.3",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^4.0.1",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.0.10",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@typescript-eslint/eslint-plugin": "^8.35.1",
+    "@typescript-eslint/parser": "^8.35.1",
+    "buffer": "^6.0.3",
+    "concurrently": "^9.2.0",
+    "cross-env": "^7.0.3",
+    "css-loader": "^7.1.2",
+    "electron-builder": "^26.0.12",
+    "eslint": "^9.30.1",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "file-loader": "^6.2.0",
+    "global": "^4.4.0",
+    "html-webpack-plugin": "^5.6.3",
+    "identity-obj-proxy": "^3.0.0",
+    "jest": "^30.0.4",
+    "jest-environment-jsdom": "^30.0.4",
+    "jest-transform-stub": "^2.0.0",
+    "less": "^4.3.0",
+    "less-loader": "^12.3.0",
+    "nodemon": "^3.1.10",
+    "path-browserify": "^1.0.1",
+    "prettier": "^3.6.2",
+    "process": "^0.11.10",
+    "rimraf": "^6.0.1",
+    "stream-browserify": "^3.0.0",
+    "style-loader": "^4.0.0",
+    "ts-jest": "^29.4.0",
+    "ts-loader": "^9.5.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3",
+    "url-loader": "^4.1.1",
+    "util": "^0.12.5",
+    "wait-on": "^8.0.3",
+    "webpack": "^5.100.0",
+    "webpack-bundle-analyzer": "^4.10.2",
+    "webpack-cli": "^6.0.1",
+    "webpack-dev-server": "^5.2.2"
+  },
+  "build": {
+    "appId": "com.quickstart.app",
+    "productName": "QuickStart",
+    "directories": {
+      "output": "dist",
+      "buildResources": "assets"
+    },
+    "files": [
+      "build/**/*",
+      "assets/**/*",
+      "node_modules/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "assets/",
+        "to": "assets/",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "build/locales/",
+        "to": "locales/",
+        "filter": [
+          "**/*.json"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "ia32"
+          ]
+        }
+      ],
+      "icon": "assets/icon.ico",
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.icns",
+      "category": "public.app-category.productivity"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.png",
+      "category": "Utility"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  }
+}

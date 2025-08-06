@@ -1,0 +1,84 @@
+{
+  "main": {
+    "files": "文件列表",
+    "styles": "样式设置",
+    "settings": "应用设置",
+    "about": "关于",
+    "menu": "菜单"
+  },
+  "file": {
+    "addFile": "添加文件",
+    "addFolder": "添加文件夹",
+    "removeFile": "移除文件",
+    "openFile": "打开文件",
+    "openFolder": "打开文件夹",
+    "showInExplorer": "在资源管理器中显示",
+    "copyPath": "复制路径",
+    "properties": "属性",
+    "rename": "重命名",
+    "delete": "删除",
+    "refresh": "刷新",
+    "selectAll": "全选",
+    "clearAll": "清空列表",
+    "sortBy": "排序方式",
+    "sortByName": "按名称排序",
+    "sortByDate": "按日期排序",
+    "sortBySize": "按大小排序",
+    "sortByType": "按类型排序",
+    "viewMode": "查看模式",
+    "listView": "列表视图",
+    "gridView": "网格视图",
+    "compactView": "紧凑视图"
+  },
+  "edit": {
+    "undo": "撤销",
+    "redo": "重做",
+    "cut": "剪切",
+    "copy": "复制",
+    "paste": "粘贴",
+    "selectAll": "全选",
+    "find": "查找",
+    "replace": "替换",
+    "preferences": "偏好设置"
+  },
+  "view": {
+    "reload": "重新加载",
+    "forceReload": "强制重新加载",
+    "toggleDevTools": "切换开发者工具",
+    "actualSize": "实际大小",
+    "zoomIn": "放大",
+    "zoomOut": "缩小",
+    "toggleFullscreen": "切换全屏",
+    "sidebar": "侧边栏",
+    "statusBar": "状态栏",
+    "toolbar": "工具栏"
+  },
+  "window": {
+    "minimize": "最小化",
+    "close": "关闭",
+    "newWindow": "新建窗口",
+    "closeWindow": "关闭窗口",
+    "alwaysOnTop": "置顶显示",
+    "bringAllToFront": "前置所有窗口"
+  },
+  "help": {
+    "about": "关于 QuickStart",
+    "checkForUpdates": "检查更新",
+    "documentation": "文档",
+    "shortcuts": "快捷键",
+    "reportIssue": "报告问题",
+    "contactSupport": "联系支持",
+    "releaseNotes": "发布说明",
+    "license": "许可证"
+  },
+  "context": {
+    "open": "打开",
+    "openWith": "打开方式",
+    "runAsAdmin": "以管理员身份运行",
+    "addToFavorites": "添加到收藏",
+    "removeFromFavorites": "从收藏中移除",
+    "pin": "固定",
+    "unpin": "取消固定",
+    "properties": "属性"
+  }
+}

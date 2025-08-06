@@ -1,0 +1,66 @@
+{
+  "panel": {
+    "title": "配置管理",
+    "description": "管理应用程序的各项配置设置"
+  },
+  "actions": {
+    "openConfigDir": "打开配置目录",
+    "resetAllConfigs": "重置所有配置"
+  },
+  "messages": {
+    "cannotOpenConfigDir": "无法打开配置目录",
+    "configSaved": "配置已保存",
+    "configSaveFailed": "保存配置失败",
+    "loadBackupsFailed": "加载备份列表失败",
+    "restoreSuccess": "配置恢复成功",
+    "restoreFailed": "配置恢复失败",
+    "downloadInProgress": "下载功能开发中..."
+  },
+  "info": {
+    "configLocation": "配置文件位置",
+    "appDataDir": "应用数据目录",
+    "configDir": "配置目录"
+  },
+  "tabs": {
+    "backupManagement": "备份管理"
+  },
+  "backup": {
+    "title": "配置备份管理",
+    "description": "查看和管理配置文件的历史备份",
+    "totalBackups": "总备份数",
+    "totalSize": "总大小",
+    "configTypes": "配置类型",
+    "latestBackup": "最新备份",
+    "selectConfigType": "选择配置类型",
+    "confirmRestore": "确定要恢复此配置吗？",
+    "restoreWarning": "当前配置将被覆盖，建议先创建备份。",
+    "restoreTooltip": "恢复此配置",
+    "downloadTooltip": "下载备份文件",
+    "noBackups": "无",
+    "infoTitle": "备份说明",
+    "infoDescription": "系统会在配置文件修改时自动创建备份。您可以选择任意备份点恢复配置，但请注意这会覆盖当前设置。",
+    "paginationText": "第 {{start}}-{{end}} 条，共 {{total}} 条备份"
+  },
+  "configTypes": {
+    "appSettings": "应用设置",
+    "themeConfig": "主题配置",
+    "layoutConfig": "布局配置",
+    "i18nConfig": "国际化配置",
+    "userPreferences": "用户偏好"
+  },
+  "table": {
+    "filename": "文件名",
+    "version": "版本",
+    "timestamp": "创建时间",
+    "configType": "配置类型",
+    "size": "大小",
+    "checksum": "校验和",
+    "actions": "操作",
+    "description": "描述"
+  },
+  "common": {
+    "confirm": "确定",
+    "cancel": "取消",
+    "types": "种"
+  }
+}

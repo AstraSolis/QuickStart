@@ -1,0 +1,67 @@
+{
+  "panel": {
+    "title": "Configuration Management",
+    "description": "Manage various application configuration settings"
+  },
+  "actions": {
+    "openConfigDir": "Open Config Directory",
+    "resetAllConfigs": "Reset All Configurations"
+  },
+  "messages": {
+    "cannotOpenConfigDir": "Cannot open configuration directory",
+    "configSaved": "Configuration saved",
+    "configSaveFailed": "Failed to save configuration",
+    "loadBackupsFailed": "Failed to load backup list",
+    "restoreSuccess": "Configuration restored successfully",
+    "restoreFailed": "Failed to restore configuration",
+    "downloadInProgress": "Download feature is under development..."
+  },
+  "info": {
+    "configLocation": "Configuration File Location",
+    "appDataDir": "Application Data Directory",
+    "configDir": "Configuration Directory"
+  },
+  "tabs": {
+    "backupManagement": "Backup Management"
+  },
+  "backup": {
+    "title": "Configuration Backup Management",
+    "description": "View and manage historical backups of configuration files",
+    "totalBackups": "Total Backups",
+    "totalSize": "Total Size",
+    "configTypes": "Config Types",
+    "latestBackup": "Latest Backup",
+    "selectConfigType": "Select Configuration Type",
+    "confirmRestore": "Are you sure you want to restore this configuration?",
+    "restoreWarning": "Current configuration will be overwritten. It is recommended to create a backup first.",
+    "restoreTooltip": "Restore this configuration",
+    "downloadTooltip": "Download backup file",
+    "noBackups": "None",
+    "infoTitle": "Backup Information",
+    "infoDescription": "The system automatically creates backups when configuration files are modified. You can select any backup point to restore the configuration, but please note that this will overwrite the current settings.",
+    "paginationText": "{{start}}-{{end}} of {{total}} backups"
+  },
+  "configTypes": {
+    "appSettings": "Application Settings",
+    "themeConfig": "Theme Configuration",
+    "layoutConfig": "Layout Configuration",
+    "i18nConfig": "Internationalization Configuration",
+    "userPreferences": "User Preferences"
+  },
+  "table": {
+    "filename": "Filename",
+    "version": "Version",
+    "timestamp": "Created Time",
+    "configType": "Config Type",
+    "configType": "Configuration Type",
+    "size": "Size",
+    "checksum": "Checksum",
+    "actions": "Actions",
+    "description": "Description"
+  },
+  "common": {
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "types": "types"
+  }
+}

@@ -1,0 +1,154 @@
+{
+  "title": "关于 QuickStart",
+  "app": {
+    "name": "QuickStart",
+    "description": "强大的文件快速启动工具",
+    "version": "v1.0.0-beta"
+  },
+  "project": {
+    "title": "项目简介",
+    "description": "QuickStart - 强大的文件快速启动工具，采用TypeScript + React + Electron架构，集成Ant Design UI框架和Apple风格设计",
+    "description1": "QuickStart 是一个基于 Electron 和 React 技术栈开发的现代化桌面应用程序，旨在为用户提供快速、便捷的文件和应用程序启动体验。",
+    "description2": "采用 TypeScript + React + Electron 架构，集成 Ant Design UI框架 和 Apple风格设计语言，为用户带来优雅、高效的使用体验。",
+    "author": {
+      "name": "开发者:AstraSolis"
+    },
+    "architecture": {
+      "javascript": "TypeScript + React + Electron",
+      "ui": "Ant Design UI框架",
+      "design": "Apple风格设计语言"
+    }
+  },
+  "techStack": {
+    "title": "技术栈",
+    "electron": "Electron 27+",
+    "react": "React 18",
+    "typescript": "TypeScript",
+    "antd": "Ant Design 5",
+    "i18next": "i18next",
+    "webpack": "Webpack 5",
+    "nodejs": "Node.js",
+    "css3": "CSS3"
+  },
+  "features": {
+    "title": "核心特性",
+    "styling": {
+      "title": "🎨 强大的样式系统",
+      "description": "支持主题切换、自定义颜色、字体配置"
+    },
+    "i18n": {
+      "title": "🌍 国际化支持",
+      "description": "支持中文、英语、俄语、法语四种语言"
+    },
+    "design": {
+      "title": "🍎 Apple风格设计",
+      "description": "毛玻璃效果、优雅动画、现代化界面"
+    },
+    "performance": {
+      "title": "⚡ 高性能架构",
+      "description": "虚拟滚动、懒加载、GPU加速"
+    }
+  },
+  "system": {
+    "title": "系统信息",
+    "electron": "Electron版本",
+    "node": "Node.js版本",
+    "chrome": "Chrome版本"
+  },
+  "actions": {
+    "title": "操作按钮",
+    "quick_actions": "快速操作",
+    "version_info": "版本信息与操作",
+    "open_source": "开源地址",
+    "github": "查看源码",
+    "feedback": "反馈问题",
+    "support": "支持项目"
+  },
+  "copyright": {
+    "title": "版权信息",
+    "text": "© 2024 开发者:AstraSolis. 保留所有权利。",
+    "license": "基于 MIT 许可证开源",
+    "disclaimer": "本软件按\"原样\"提供，不提供任何形式的明示或暗示担保。"
+  },
+  "tabs": {
+    "overview": "概览",
+    "acknowledgments": "鸣谢",
+    "copyright": "版权",
+    "support": "支持"
+  },
+  "acknowledgments": {
+    "title": "鸣谢",
+    "description": "感谢以下开源项目和技术栈的支持",
+    "tech_stack": {
+      "electron": {
+        "name": "Electron",
+        "description": "跨平台桌面应用开发框架",
+        "url": "https://www.electronjs.org/"
+      },
+      "react": {
+        "name": "React",
+        "description": "用于构建用户界面的JavaScript库",
+        "url": "https://reactjs.org/"
+      },
+      "typescript": {
+        "name": "TypeScript",
+        "description": "JavaScript的超集，添加了静态类型",
+        "url": "https://www.typescriptlang.org/"
+      },
+      "antd": {
+        "name": "Ant Design",
+        "description": "企业级UI设计语言和React组件库",
+        "url": "https://ant.design/"
+      },
+      "i18next": {
+        "name": "i18next",
+        "description": "国际化框架",
+        "url": "https://www.i18next.com/"
+      },
+      "webpack": {
+        "name": "Webpack",
+        "description": "模块打包工具",
+        "url": "https://webpack.js.org/"
+      },
+      "nodejs": {
+        "name": "Node.js",
+        "description": "JavaScript运行时环境",
+        "url": "https://nodejs.org/"
+      },
+      "sqlite": {
+        "name": "Better SQLite3",
+        "description": "高性能SQLite数据库驱动",
+        "url": "https://github.com/WiseLibs/better-sqlite3"
+      },
+      "jest": {
+        "name": "Jest",
+        "description": "JavaScript测试框架",
+        "url": "https://jestjs.io/"
+      },
+      "eslint": {
+        "name": "ESLint",
+        "description": "JavaScript代码检查工具",
+        "url": "https://eslint.org/"
+      },
+      "prettier": {
+        "name": "Prettier",
+        "description": "代码格式化工具",
+        "url": "https://prettier.io/"
+      }
+    }
+  },
+  "version": {
+    "title": "版本信息",
+    "app": "应用版本",
+    "build_date": "构建日期",
+    "build_date_value": "2025-07-05",
+    "build_number": "构建版本",
+    "build_number_value": "Build 2025070501",
+    "environment": "环境",
+    "environment_value": "生产环境"
+  },
+  "support": {
+    "title": "支持项目",
+    "description": "如果您觉得这个项目对您有帮助，请考虑支持我们的开发工作。"
+  }
+}

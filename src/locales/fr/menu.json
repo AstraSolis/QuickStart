@@ -1,0 +1,84 @@
+{
+  "main": {
+    "files": "Liste des fichiers",
+    "styles": "Paramètres de style",
+    "settings": "Paramètres de l'application",
+    "about": "À propos",
+    "menu": "Menu"
+  },
+  "file": {
+    "addFile": "Ajouter un fichier",
+    "addFolder": "Ajouter un dossier",
+    "removeFile": "Supprimer le fichier",
+    "openFile": "Ouvrir le fichier",
+    "openFolder": "Ouvrir le dossier",
+    "showInExplorer": "Afficher dans l'explorateur",
+    "copyPath": "Copier le chemin",
+    "properties": "Propriétés",
+    "rename": "Renommer",
+    "delete": "Supprimer",
+    "refresh": "Actualiser",
+    "selectAll": "Sélectionner tout",
+    "clearAll": "Vider la liste",
+    "sortBy": "Trier par",
+    "sortByName": "Par nom",
+    "sortByDate": "Par date",
+    "sortBySize": "Par taille",
+    "sortByType": "Par type",
+    "viewMode": "Mode d'affichage",
+    "listView": "Liste",
+    "gridView": "Grille",
+    "compactView": "Compact"
+  },
+  "edit": {
+    "undo": "Annuler",
+    "redo": "Rétablir",
+    "cut": "Couper",
+    "copy": "Copier",
+    "paste": "Coller",
+    "selectAll": "Sélectionner tout",
+    "find": "Rechercher",
+    "replace": "Remplacer",
+    "preferences": "Préférences"
+  },
+  "view": {
+    "reload": "Recharger",
+    "forceReload": "Forcer le rechargement",
+    "toggleDevTools": "Outils de développement",
+    "actualSize": "Taille réelle",
+    "zoomIn": "Agrandir",
+    "zoomOut": "Réduire",
+    "toggleFullscreen": "Mode plein écran",
+    "sidebar": "Barre latérale",
+    "statusBar": "Barre d'état",
+    "toolbar": "Barre d'outils"
+  },
+  "window": {
+    "minimize": "Réduire",
+    "close": "Fermer",
+    "newWindow": "Nouvelle fenêtre",
+    "closeWindow": "Fermer la fenêtre",
+    "alwaysOnTop": "Toujours au premier plan",
+    "bringAllToFront": "Toutes les fenêtres au premier plan"
+  },
+  "help": {
+    "about": "À propos de QuickStart",
+    "checkForUpdates": "Vérifier les mises à jour",
+    "documentation": "Documentation",
+    "shortcuts": "Raccourcis clavier",
+    "reportIssue": "Signaler un problème",
+    "contactSupport": "Contacter le support",
+    "releaseNotes": "Notes de version",
+    "license": "Licence"
+  },
+  "context": {
+    "open": "Ouvrir",
+    "openWith": "Ouvrir avec",
+    "runAsAdmin": "Exécuter en tant qu'administrateur",
+    "addToFavorites": "Ajouter aux favoris",
+    "removeFromFavorites": "Supprimer des favoris",
+    "pin": "Épingler",
+    "unpin": "Désépingler",
+    "properties": "Propriétés"
+  }
+}

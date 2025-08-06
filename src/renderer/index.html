@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QuickStart</title>
+  
+  <!-- 内容安全策略 - 开发环境和生产环境兼容 -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'unsafe-inline' 'unsafe-eval' ws://localhost:3000 ws://127.0.0.1:3000;
+    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+    img-src 'self' data: file: blob: https:;
+    font-src 'self' data: https://fonts.gstatic.com;
+    connect-src 'self' ws://localhost:3000 ws://127.0.0.1:3000 http://localhost:3000 http://127.0.0.1:3000 https:;
+    media-src 'self';
+    object-src 'none';
+    child-src 'none';
+    worker-src 'none';
+    frame-src 'none';
+    base-uri 'self';
+    form-action 'self';
+  ">
+  
+  <!-- 预加载关键字体 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  
+  <!-- Apple风格字体 - SF Pro Display备用方案 -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    /* 基础重置样式 */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    /* Apple风格基础样式 */
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+      font-size: 14px;
+      line-height: 1.5715;
+      color: #000000;
+      background-color: #ffffff;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow: hidden;
+    }
+    
+    /* 主容器 */
+    #root {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    /* 加载动画 */
+    .loading-container {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-top: 3px solid white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .loading-text {
+      font-size: 16px;
+      font-weight: 500;
+      opacity: 0.9;
+    }
+    
+    /* 毛玻璃效果基础样式 */
+    .glass-effect {
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      background: rgba(255, 255, 255, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    /* 暗黑模式支持 */
+    @media (prefers-color-scheme: dark) {
+      body {
+        color: #ffffff;
+        background-color: #1a1a1a;
+      }
+      
+      .glass-effect {
+        background: rgba(30, 30, 30, 0.8);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+    }
+    
+    /* 减少动画偏好支持 */
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+    
+    /* 高对比度模式支持 */
+    @media (prefers-contrast: high) {
+      body {
+        background-color: white;
+        color: black;
+      }
+      
+      .glass-effect {
+        background: white;
+        border: 2px solid black;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- React应用挂载点 -->
+  <div id="root">
+    <!-- 初始加载界面 -->
+    <div class="loading-container">
+      <div class="loading-spinner"></div>
+      <div class="loading-text" id="loading-text">QuickStart is starting...</div>
+    </div>
+  </div>
+  
+  <!-- 全局类型声明 -->
+  <script>
+    // 声明全局electronAPI类型，避免TypeScript错误
+    window.electronAPI = window.electronAPI || {};
+
+    // 为开发环境提供 global 对象
+    if (typeof global === 'undefined') {
+      window.global = window;
+    }
+
+    // 提供process对象的polyfill
+    if (typeof process === 'undefined') {
+      window.process = {
+        env: {
+          NODE_ENV: 'development'
+        }
+      };
+    }
+
+    // 动态设置加载文本基于浏览器语言 - 使用独立的翻译文件
+    (function() {
+      // 简化的语言检测逻辑，与主i18n系统保持一致
+      function detectLanguage() {
+        const browserLang = navigator.language || navigator.userLanguage || 'en';
+        const supportedLanguages = ['zh-CN', 'en', 'ru', 'fr'];
+
+        // 精确匹配
+        if (supportedLanguages.includes(browserLang)) {
+          return browserLang;
+        }
+
+        // 语言代码匹配
+        const langCode = browserLang.split('-')[0];
+        if (langCode === 'zh') return 'zh-CN';
+        if (supportedLanguages.includes(langCode)) return langCode;
+
+        return 'en'; // 默认回退
+      }
+
+      // 从独立翻译文件加载文本的简化版本
+      async function getLoadingText() {
+        const language = detectLanguage();
+        try {
+          const response = await fetch(`./locales/${language}/startup.json`);
+          if (response.ok) {
+            const translations = await response.json();
+            return translations.loading.text;
+          }
+        } catch (error) {
+          console.warn('Failed to load startup translations:', error);
+        }
+
+        // 回退到硬编码文本（仅在翻译文件加载失败时）
+        const fallbackTexts = {
+          'zh-CN': 'QuickStart 正在启动...',
+          'en': 'QuickStart is starting...',
+          'ru': 'QuickStart запускается...',
+          'fr': 'QuickStart démarre...'
+        };
+        return fallbackTexts[language] || fallbackTexts['en'];
+      }
+
+      // 异步加载并设置文本
+      async function setLoadingText() {
+        const text = await getLoadingText();
+        const loadingElement = document.getElementById('loading-text');
+        if (loadingElement) {
+          loadingElement.textContent = text;
+        }
+      }
+
+      // 等待DOM加载完成后设置文本
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setLoadingText);
+      } else {
+        // DOM已经加载完成，立即设置文本
+        setLoadingText();
+      }
+    })();
+  </script>
+  
+  <!-- 开发环境热重载支持 -->
+  <script>
+    // 安全检查 process 对象是否存在，仅在开发环境输出日志
+    if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'development') {
+      // 开发环境下的热重载逻辑
+      console.log('QuickStart Development Mode');
+    }
+  </script>
+</body>
+</html>
