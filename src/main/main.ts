@@ -150,7 +150,7 @@ let tray: Tray | null = null;
 // 改进环境检测：支持多种环境判断方式
 const isDev = process.env.NODE_ENV === 'development' ||
               (!app.isPackaged && process.env.NODE_ENV !== 'production');
-const RENDERER_URL = isDev ? 'http://localhost:3000' : `file://${join(__dirname, '../renderer/index.html')}`;
+const RENDERER_URL = isDev ? 'http://localhost:3001' : `file://${join(__dirname, '../renderer/index.html')}`;
 
 // 调试信息：输出环境检测结果
 const envInfo = {

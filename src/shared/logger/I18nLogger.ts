@@ -5,7 +5,7 @@
  */
 
 import { LogManager } from './LogManager';
-import { LogLevel, LogCategory, type LogSource } from './types';
+import { LogCategory, type LogSource } from './types';
 
 /**
  * 日志记录器

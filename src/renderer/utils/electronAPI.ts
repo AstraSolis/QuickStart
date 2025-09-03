@@ -12,7 +12,7 @@ const t = (key: string, defaultValue: string, options?: any): string => {
   try {
     const result = i18n.t(key, defaultValue, options);
     return typeof result === 'string' ? result : defaultValue;
-  } catch (error) {
+  } catch {
     // 翻译失败时使用默认值
     return defaultValue;
   }

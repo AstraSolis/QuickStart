@@ -41,6 +41,11 @@ export default [
         module: 'readonly',
         exports: 'readonly',
         global: 'readonly',
+        performance: 'readonly',
+        fetch: 'readonly',
+        Image: 'readonly',
+        requestAnimationFrame: 'readonly',
+        cancelAnimationFrame: 'readonly',
         // TypeScript globals
         NodeJS: 'readonly',
         React: 'readonly',

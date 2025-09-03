@@ -76,7 +76,7 @@ export class WindowHandler {
           isMaximized: window.isMaximized(),
           isMinimized: window.isMinimized(),
           isFullScreen: window.isFullScreen(),
-          bounds: bounds
+          bounds
         };
       }
       return null;

@@ -12,8 +12,7 @@ import {
   type LogCategory,
   type ProcessInfo,
   type LogConfig,
-  type ILogger,
-  type SupportedLanguage
+  type ILogger
 } from './types';
 import { LogFormatter } from './LogFormatter';
 import { LogFileManager } from './LogFileManager';

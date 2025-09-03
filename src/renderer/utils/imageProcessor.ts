@@ -756,7 +756,7 @@ export class ImageProcessor {
         onProgress(100);
 
         // 合并所有块
-        blob = new Blob(chunks);
+        blob = new Blob(chunks as BlobPart[]);
       } else {
         // 如果没有进度回调，使用原来的方法
         blob = await response.blob();
@@ -797,7 +797,7 @@ export class ImageProcessor {
           if (result?.success && result.data) {
             // 将Buffer转换为File对象
             const buffer = result.data;
-            const blob = new Blob([buffer]);
+            const blob = new Blob([buffer as BlobPart]);
             const fallbackFilename = this.getFilenameFromUrl(url) || `downloaded-image-${Date.now()}.${this.getFormatFromUrl(url)}`;
             const file = new File([blob], fallbackFilename, { type: 'image/jpeg' });
 

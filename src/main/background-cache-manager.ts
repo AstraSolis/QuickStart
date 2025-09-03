@@ -76,7 +76,9 @@ export class BackgroundCacheManager {
 
       // 等待应用准备就绪
       if (!app.isReady()) {
+        console.log('BackgroundCacheManager: Waiting for app to be ready...');
         await app.whenReady();
+        console.log('BackgroundCacheManager: App is now ready');
       }
 
       // 初始化路径
@@ -85,25 +87,41 @@ export class BackgroundCacheManager {
       this.cacheDir = path.join(cacheBaseDir, CONFIG_PATHS.BACKGROUND_IMAGES);
       this.metadataFile = path.join(this.cacheDir, 'cache-metadata.json');
 
-      console.log('BackgroundCacheManager: Cache directory path:', this.cacheDir);
+      console.log('BackgroundCacheManager: Paths initialized:', {
+        appDataPath,
+        cacheBaseDir,
+        cacheDir: this.cacheDir,
+        metadataFile: this.metadataFile
+      });
 
       // 创建缓存目录
+      console.log('BackgroundCacheManager: Creating cache directory...');
       await this.ensureCacheDirectory();
+      console.log('BackgroundCacheManager: Cache directory created successfully');
 
       // 加载缓存元数据
+      console.log('BackgroundCacheManager: Loading cache metadata...');
       await this.loadCacheMetadata();
+      console.log('BackgroundCacheManager: Cache metadata loaded successfully');
 
       // 清理过期缓存
+      console.log('BackgroundCacheManager: Cleaning up expired cache...');
       await this.cleanupExpiredCache();
+      console.log('BackgroundCacheManager: Expired cache cleanup completed');
 
       this.isInitialized = true;
       console.log('BackgroundCacheManager: Initialization completed successfully');
     } catch (error) {
       console.error('BackgroundCacheManager: Failed to initialize:', error);
+      console.error('BackgroundCacheManager: Error stack:', error instanceof Error ? error.stack : 'No stack available');
+      
       // 重置初始化状态，允许重试
       this.isInitialized = false;
       this.initializationPromise = null;
-      throw new Error(`缓存管理器初始化失败: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('BackgroundCacheManager: Throwing initialization error:', errorMessage);
+      throw new Error(`缓存管理器初始化失败: ${errorMessage}`);
     }
   }
 
@@ -553,10 +571,6 @@ export class BackgroundCacheManager {
    * 获取缓存图片
    */
   async getCachedImage(originalPath: string): Promise<CachedImage | null> {
-    if (!this.isInitialized) {
-      throw new Error('BackgroundCacheManager not initialized');
-    }
-
     const id = this.generateCacheId(originalPath);
     const cachedImage = this.cache.get(id);
 
@@ -576,10 +590,6 @@ export class BackgroundCacheManager {
    * 删除缓存图片
    */
   async removeCachedImage(originalPath: string): Promise<boolean> {
-    if (!this.isInitialized) {
-      throw new Error('BackgroundCacheManager not initialized');
-    }
-
     // 查找要删除的缓存图片（通过originalPath匹配）
     let targetImage: CachedImage | null = null;
     let targetId: string | null = null;
